@@ -15,18 +15,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _page = 0;
   NotifyStyle _selectedStyle = NotifyStyle.notification;
-  int _selectedCalc = 3;
-
-  static const _calcMethods = {
-    3: 'Muslim World League',
-    2: 'ISNA (North America)',
-    4: 'Umm al-Qura (Makkah)',
-    1: 'University of Karachi',
-    5: 'Egyptian General Authority',
-  };
 
   void _next() {
-    if (_page < 5) {
+    if (_page < 4) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -46,7 +37,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     await AppSettings.setNotifyStyle(_selectedStyle);
-    await AppSettings.setCalcMethod(_selectedCalc);
     await AppSettings.setOnboarded(true);
     widget.onComplete();
   }
@@ -68,7 +58,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _locationPage(),
                   _notificationPage(),
                   _stylePage(),
-                  _calcPage(),
                   _donePage(),
                 ],
               ),
@@ -84,7 +73,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _dots() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(6, (i) {
+      children: List.generate(5, (i) {
         final active = i == _page;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
@@ -315,74 +304,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const Icon(Icons.check_circle_rounded, color: AppColors.gold),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _calcPage() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Icon(Icons.calculate_rounded, size: 56, color: AppColors.gold),
-          const SizedBox(height: 20),
-          const Text(
-            'Prayer calculation method',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textOnDarkPrimary,
-              fontSize: 23,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Pick the method used in your region. You can change it later.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textOnDarkSecondary),
-          ),
-          const SizedBox(height: 24),
-          ..._calcMethods.entries.map((e) {
-            final selected = _selectedCalc == e.key;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedCalc = e.key),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.gold.withValues(alpha: 0.15)
-                        : AppColors.darkSurface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected ? AppColors.gold : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(e.value,
-                            style: const TextStyle(
-                              color: AppColors.textOnDarkPrimary,
-                              fontSize: 15,
-                            )),
-                      ),
-                      if (selected)
-                        const Icon(Icons.check_circle_rounded,
-                            color: AppColors.gold, size: 20),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 16),
-          _primaryButton('Continue', _next),
-        ],
       ),
     );
   }

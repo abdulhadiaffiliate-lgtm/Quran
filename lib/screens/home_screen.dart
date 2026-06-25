@@ -5,9 +5,11 @@ import '../services/location_service.dart';
 import '../services/prayer_service.dart';
 import '../services/streak_service.dart';
 import '../services/app_settings.dart';
+import '../services/calc_method_resolver.dart';
 import '../theme/app_colors.dart';
 import '../utils/good_deeds.dart';
 import '../widgets/countdown_arc.dart';
+import '../widgets/goals_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
         if (cached == null) rethrow;
         lat = cached.lat;
         lng = cached.lng;
+      }
+      if (!await AppSettings.isCalcMethodAutoDetected()) {
+        final detected =
+            await CalcMethodResolver.resolveFromCoordinates(lat, lng);
+        if (detected != null) {
+          await AppSettings.setCalcMethod(detected);
+        }
+        await AppSettings.setCalcMethodAutoDetected(true);
       }
       final method = await AppSettings.getCalcMethod();
       final times = await PrayerService.getTodayTimings(
@@ -187,6 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 16),
         _buildPrayerList(times, next.key),
+        const SizedBox(height: 16),
+        const GoalsCard(),
         const SizedBox(height: 20),
         _buildDailyGoodDeed(),
       ],

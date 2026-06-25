@@ -54,4 +54,16 @@ class AppSettings {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_calcMethodKey, method);
   }
+
+  static const _calcAutoDetectedKey = 'calc_method_auto_detected';
+
+  static Future<bool> isCalcMethodAutoDetected() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_calcAutoDetectedKey) ?? false;
+  }
+
+  static Future<void> setCalcMethodAutoDetected(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_calcAutoDetectedKey, value);
+  }
 }

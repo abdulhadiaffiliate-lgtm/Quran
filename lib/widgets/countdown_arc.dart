@@ -21,46 +21,56 @@ class CountdownArc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1.4,
-      child: CustomPaint(
-        painter: _ArcPainter(progress: progress),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 12),
-              Text(
-                'Next: $nextPrayerName',
-                style: TextStyle(
-                  color: AppColors.gold,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: 1.4,
+          child: CustomPaint(
+            painter: _ArcPainter(progress: progress),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    remainingLabel,
+                    style: const TextStyle(
+                      color: AppColors.textOnDarkPrimary,
+                      fontSize: 40,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'at $nextTimeLabel',
+                    style: const TextStyle(
+                      color: AppColors.textOnDarkSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                remainingLabel,
-                style: const TextStyle(
-                  color: AppColors.textOnDarkPrimary,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'at $nextTimeLabel',
-                style: const TextStyle(
-                  color: AppColors.textOnDarkSecondary,
-                  fontSize: 14,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.gold.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            'Next: $nextPrayerName',
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

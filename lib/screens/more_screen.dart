@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/theme_provider.dart';
-import 'hadith_screen.dart';
+import 'tasbih_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -19,12 +19,12 @@ class MoreScreen extends StatelessWidget {
           children: [
             _tile(
               context,
-              icon: Icons.menu_book_rounded,
-              title: 'Hadith',
-              subtitle: 'Daily hadith and collections',
+              icon: Icons.radio_button_checked_rounded,
+              title: 'Tasbih',
+              subtitle: 'Digital dhikr counter',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const HadithScreen()),
+                MaterialPageRoute(builder: (_) => const TasbihScreen()),
               ),
             ),
             const SizedBox(height: 12),
@@ -53,17 +53,9 @@ class MoreScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _tile(
               context,
-              icon: Icons.calculate_rounded,
-              title: 'Calculation method',
-              subtitle: 'Adjust how prayer times are computed',
-              onTap: () => _comingSoon(context),
-            ),
-            const SizedBox(height: 12),
-            _tile(
-              context,
               icon: Icons.info_outline_rounded,
               title: 'About',
-              subtitle: 'Namaz Alert v1.0',
+              subtitle: 'SalahSync v1.0',
               onTap: () => _showAbout(context),
             ),
           ],
@@ -100,7 +92,7 @@ class MoreScreen extends StatelessWidget {
   void _showAbout(BuildContext context) {
     showAboutDialog(
       context: context,
-      applicationName: 'Namaz Alert',
+      applicationName: 'SalahSync',
       applicationVersion: '1.0.0',
       children: [
         const Text(

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../services/goals_service.dart';
 
 class TasbihScreen extends StatefulWidget {
   const TasbihScreen({super.key});
@@ -52,6 +53,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
       }
     });
     _saveLifetime();
+    GoalsService.addDhikr(1);
   }
 
   void _reset() {

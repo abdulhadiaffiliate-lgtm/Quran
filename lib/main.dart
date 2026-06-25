@@ -7,7 +7,7 @@ import 'services/streak_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/quran_screen.dart';
 import 'screens/qibla_screen.dart';
-import 'screens/tasbih_screen.dart';
+import 'screens/hadith_screen.dart';
 import 'screens/more_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/daily_popup.dart';
@@ -92,7 +92,7 @@ class _RootShellState extends State<RootShell> {
     HomeScreen(),
     QuranScreen(),
     QiblaScreen(),
-    TasbihScreen(),
+    HadithScreen(),
     MoreScreen(),
   ];
 
@@ -131,8 +131,8 @@ class _RootShellState extends State<RootShell> {
             label: 'Qibla',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.radio_button_checked_rounded),
-            label: 'Tasbih',
+            icon: Icon(Icons.format_quote_rounded),
+            label: 'Hadith',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.grid_view_rounded),
