@@ -1,0 +1,70 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      # Our repo contains lib/, pubspec.yaml, assets/, and the workflow.
+      # Regenerate the platform folders (android/ios/etc.) which aren't
+      # committed, without overwriting our existing files.
+      - name: Generate platform scaffolding
+        run: flutter create . --org com.namazalert --project-name namaz_alert --platforms=android
+
+      - name: Add required permissions to AndroidManifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          # Insert permissions right after the opening <manifest> tag.
+          python3 - <<'PY'
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path) as f:
+              content = f.read()
+          perms = '''
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+              <uses-permission android:name="android.permission.VIBRATE"/>
+          '''
+          marker = '<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
+          if 'ACCESS_FINE_LOCATION' not in content:
+              content = content.replace(marker, marker + perms, 1)
+              with open(path, 'w') as f:
+                  f.write(content)
+              print("Permissions injected.")
+          else:
+              print("Permissions already present.")
+          PY
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: namaz-alert-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk

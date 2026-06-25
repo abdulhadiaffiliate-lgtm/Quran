@@ -1,0 +1,53 @@
+name: namaz_alert
+description: "Prayer times, Qibla direction, Quran, Hadith, Tasbih, and daily reminders."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.6
+
+  # Networking
+  http: ^1.2.1
+
+  # Local storage (settings, tasbih counts, favorites, cached API data)
+  shared_preferences: ^2.2.3
+
+  # Location + compass for Qibla direction
+  geolocator: ^12.0.0
+  flutter_compass: ^0.8.0
+
+  # Notifications for prayer alerts and daily reminders
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+  # Audio playback for adhan
+  audioplayers: ^6.0.0
+
+  # State management
+  provider: ^6.1.2
+
+  # Nice fonts (Arabic + Latin)
+  google_fonts: ^6.2.1
+
+  # Pull-to-refresh, shimmer loading, smooth UI touches
+  shimmer: ^3.0.0
+
+  # App icon / splash generation tools are dev dependencies below
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/data/
