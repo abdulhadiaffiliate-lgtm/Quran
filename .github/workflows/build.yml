@@ -57,8 +57,76 @@ jobs:
               print("Permissions already present.")
           PY
 
+      - name: Enable core library desugaring
+        run: |
+          python3 - <<'PY'
+          import os
+
+          # Newer Flutter generates Kotlin DSL (build.gradle.kts); older uses Groovy (build.gradle).
+          kts = "android/app/build.gradle.kts"
+          groovy = "android/app/build.gradle"
+          path = kts if os.path.exists(kts) else groovy
+          with open(path) as f:
+              content = f.read()
+
+          if "isCoreLibraryDesugaringEnabled" in content or "coreLibraryDesugaringEnabled" in content:
+              print("Desugaring already enabled.")
+          elif path == kts:
+              # Kotlin DSL
+              content = content.replace(
+                  "compileOptions {",
+                  "compileOptions {\n        isCoreLibraryDesugaringEnabled = true",
+                  1,
+              )
+              if "dependencies {" in content:
+                  content = content.replace(
+                      "dependencies {",
+                      'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")',
+                      1,
+                  )
+              else:
+                  content += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              with open(path, "w") as f:
+                  f.write(content)
+              print("Desugaring enabled (Kotlin DSL).")
+          else:
+              # Groovy DSL
+              content = content.replace(
+                  "compileOptions {",
+                  "compileOptions {\n        coreLibraryDesugaringEnabled true",
+                  1,
+              )
+              if "dependencies {" in content:
+                  content = content.replace(
+                      "dependencies {",
+                      "dependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'",
+                      1,
+                  )
+              else:
+                  content += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+              with open(path, "w") as f:
+                  f.write(content)
+              print("Desugaring enabled (Groovy DSL).")
+          PY
+
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Set app display name to SalahSync
+        run: |
+          python3 - <<'PY'
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path) as f:
+              content = f.read()
+          import re
+          content = re.sub(r'android:label="[^"]*"', 'android:label="SalahSync"', content, count=1)
+          with open(path, "w") as f:
+              f.write(content)
+          print("App name set to SalahSync.")
+          PY
 
       - name: Build debug APK
         run: flutter build apk --debug
@@ -66,5 +134,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: namaz-alert-debug-apk
+          name: SalahSync-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk

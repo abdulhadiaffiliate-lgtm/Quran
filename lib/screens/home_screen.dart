@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/prayer_times.dart';
 import '../services/location_service.dart';
 import '../services/prayer_service.dart';
+import '../services/streak_service.dart';
+import '../services/app_settings.dart';
 import '../theme/app_colors.dart';
 import '../utils/good_deeds.dart';
 import '../widgets/countdown_arc.dart';
@@ -19,15 +21,22 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   bool _loading = true;
   Timer? _ticker;
+  int _streak = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadStreak();
     // Refresh the countdown display every second.
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && _times != null) setState(() {});
     });
+  }
+
+  Future<void> _loadStreak() async {
+    final s = await StreakService.getCurrentStreak();
+    if (mounted) setState(() => _streak = s);
   }
 
   @override
@@ -53,9 +62,11 @@ class _HomeScreenState extends State<HomeScreen> {
         lat = cached.lat;
         lng = cached.lng;
       }
+      final method = await AppSettings.getCalcMethod();
       final times = await PrayerService.getTodayTimings(
         latitude: lat,
         longitude: lng,
+        method: method,
       );
       if (!mounted) return;
       setState(() {
@@ -167,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 8),
+        if (_streak > 0) _buildStreakBadge(),
         CountdownArc(
           progress: progress,
           nextPrayerName: next.key,
@@ -178,6 +190,33 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 20),
         _buildDailyGoodDeed(),
       ],
+    );
+  }
+
+  Widget _buildStreakBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.local_fire_department_rounded,
+              color: AppColors.gold, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            '$_streak day streak',
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

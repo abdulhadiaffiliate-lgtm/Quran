@@ -3,11 +3,13 @@ class Ayah {
   final int numberInSurah;
   final String arabicText;
   final String? translationText;
+  final String? audioUrl;
 
   Ayah({
     required this.numberInSurah,
     required this.arabicText,
     this.translationText,
+    this.audioUrl,
   });
 }
 

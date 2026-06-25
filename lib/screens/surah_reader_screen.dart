@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../models/quran.dart';
 import '../services/quran_service.dart';
+import '../services/app_settings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 
@@ -16,17 +18,33 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   Surah? _full;
   String? _error;
   bool _showTranslation = true;
+  String _language = 'English';
+
+  final AudioPlayer _player = AudioPlayer();
+  int? _playingAyah; // numberInSurah currently playing
 
   @override
   void initState() {
     super.initState();
+    _init();
+    _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playingAyah = null);
+    });
+  }
+
+  Future<void> _init() async {
+    _language = await AppSettings.getTranslationLanguage();
     _load();
   }
 
   Future<void> _load() async {
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _full = null;
+    });
     try {
-      final full = await QuranService.getSurah(widget.surahMeta.number);
+      final full =
+          await QuranService.getSurah(widget.surahMeta.number, language: _language);
       if (!mounted) return;
       setState(() => _full = full);
     } catch (e) {
@@ -35,12 +53,47 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     }
   }
 
+  Future<void> _toggleLanguage() async {
+    final newLang = _language == 'English' ? 'Urdu' : 'English';
+    setState(() => _language = newLang);
+    await AppSettings.setTranslationLanguage(newLang);
+    _load();
+  }
+
+  Future<void> _playAyah(Ayah ayah) async {
+    if (ayah.audioUrl == null) return;
+    if (_playingAyah == ayah.numberInSurah) {
+      await _player.stop();
+      setState(() => _playingAyah = null);
+    } else {
+      await _player.stop();
+      await _player.play(UrlSource(ayah.audioUrl!));
+      setState(() => _playingAyah = ayah.numberInSurah);
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.surahMeta.nameEnglish),
         actions: [
+          TextButton(
+            onPressed: _toggleLanguage,
+            child: Text(
+              _language == 'English' ? 'EN' : 'اردو',
+              style: const TextStyle(
+                color: AppColors.gold,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Toggle translation',
             icon: Icon(_showTranslation
@@ -113,7 +166,8 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           ),
           Text(
             '${surah.ayahCount} verses · ${surah.revelationType}',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
           ),
           if (surah.number != 1 && surah.number != 9) ...[
             const SizedBox(height: 16),
@@ -131,12 +185,16 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   }
 
   Widget _buildAyah(Ayah ayah) {
+    final isPlaying = _playingAyah == ayah.numberInSurah;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(16),
+        border: isPlaying
+            ? Border.all(color: AppColors.gold, width: 1.5)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,6 +218,17 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                   ),
                 ),
               ),
+              const Spacer(),
+              if (ayah.audioUrl != null)
+                IconButton(
+                  icon: Icon(
+                    isPlaying
+                        ? Icons.pause_circle_filled_rounded
+                        : Icons.play_circle_outline_rounded,
+                    color: AppColors.gold,
+                  ),
+                  onPressed: () => _playAyah(ayah),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -180,8 +249,12 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
             const SizedBox(height: 12),
             Text(
               ayah.translationText!,
+              textAlign:
+                  _language == 'Urdu' ? TextAlign.right : TextAlign.left,
+              textDirection:
+                  _language == 'Urdu' ? TextDirection.rtl : TextDirection.ltr,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
+                    height: 1.6,
                   ),
             ),
           ],
