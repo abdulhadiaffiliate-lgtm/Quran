@@ -22,6 +22,17 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Install Android SDK Platform 36
+        run: |
+          ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -f "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_SDK_ROOT" -name "sdkmanager" 2>/dev/null | head -1)
+          fi
+          echo "Using sdkmanager at: $SDKMANAGER"
+          yes | "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" || true
+          yes | "$SDKMANAGER" --licenses || true
+
       - name: Show Flutter version
         run: flutter --version
 
@@ -62,6 +73,7 @@ jobs:
           python3 - <<'PY'
           import os
 
+          # Newer Flutter generates Kotlin DSL (build.gradle.kts); older uses Groovy (build.gradle).
           kts = "android/app/build.gradle.kts"
           groovy = "android/app/build.gradle"
           path = kts if os.path.exists(kts) else groovy
@@ -106,6 +118,49 @@ jobs:
               with open(path, "w") as f:
                   f.write(content)
               print("Desugaring enabled (Groovy DSL).")
+          PY
+
+      - name: Bump compileSdk for geocoding compatibility
+        run: |
+          python3 - <<'PY'
+          import os, re
+
+          kts = "android/app/build.gradle.kts"
+          groovy = "android/app/build.gradle"
+          path = kts if os.path.exists(kts) else groovy
+          with open(path) as f:
+              content = f.read()
+
+          print("=== Lines mentioning Sdk BEFORE ===")
+          for line in content.splitlines():
+              if 'Sdk' in line:
+                  print(repr(line))
+
+          if path == kts:
+              new_content = re.sub(
+                  r'compileSdk\s*=?\s*(flutter\.compileSdkVersion|\d+)',
+                  'compileSdk = 36',
+                  content,
+                  count=1,
+              )
+          else:
+              new_content = re.sub(
+                  r'compileSdkVersion\s+(flutter\.compileSdkVersion|\d+)',
+                  'compileSdkVersion 36',
+                  content,
+                  count=1,
+              )
+
+          changed = new_content != content
+          print("=== Regex changed file:", changed, "===")
+
+          with open(path, "w") as f:
+              f.write(new_content)
+
+          print("=== Lines mentioning Sdk AFTER ===")
+          for line in new_content.splitlines():
+              if 'Sdk' in line:
+                  print(repr(line))
           PY
 
       - name: Get dependencies

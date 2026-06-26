@@ -66,10 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       if (!await AppSettings.isCalcMethodAutoDetected()) {
         final detected =
-            await CalcMethodResolver.resolveFromCoordinates(lat, lng);
-        if (detected != null) {
-          await AppSettings.setCalcMethod(detected);
-        }
+            CalcMethodResolver.resolveFromCoordinates(lat, lng);
+        await AppSettings.setCalcMethod(detected);
         await AppSettings.setCalcMethodAutoDetected(true);
       }
       final method = await AppSettings.getCalcMethod();

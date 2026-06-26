@@ -1,45 +1,61 @@
-import 'package:geocoding/geocoding.dart';
-
-/// Maps a country to the AlAdhan calculation method most commonly used
-/// there. Falls back to Muslim World League (3) when unknown.
+/// Maps coordinates to the AlAdhan calculation method most commonly used
+/// in that region, using rough geographic bounding boxes. This is a pure
+/// Dart approach with no native dependencies (no geocoding plugin needed).
+///
+/// AlAdhan method IDs: see https://aladhan.com/calculation-methods
+/// 1 = University of Islamic Sciences, Karachi
+/// 2 = ISNA (North America)
+/// 3 = Muslim World League (default fallback)
+/// 4 = Umm al-Qura (Makkah)
+/// 5 = Egyptian General Authority
+/// 8 = Gulf Region
+/// 12 = Union des organisations islamiques de France
+/// 13 = Diyanet, Turkey
 class CalcMethodResolver {
   CalcMethodResolver._();
 
-  // AlAdhan method IDs: see https://aladhan.com/calculation-methods
-  static const Map<String, int> _byCountryCode = {
-    'SA': 4, // Umm al-Qura, Saudi Arabia
-    'US': 2, // ISNA, North America
-    'CA': 2,
-    'EG': 5, // Egyptian General Authority
-    'PK': 1, // University of Karachi
-    'IN': 1,
-    'BD': 1,
-    'TR': 13, // Diyanet, Turkey
-    'AE': 8, // Gulf Region
-    'KW': 9,
-    'QA': 10,
-    'SG': 11, // Singapore
-    'MY': 11,
-    'ID': 11,
-    'FR': 12, // Union Organization Islamic de France
-    'MA': 21, // Morocco
-    'JO': 23, // Jordan
-  };
+  /// Returns a method id for the given coordinates. Never throws; falls
+  /// back to Muslim World League (3) for anywhere not specifically mapped.
+  static int resolveFromCoordinates(double lat, double lng) {
+    // Saudi Arabia (Umm al-Qura)
+    if (_inBox(lat, lng, 16.0, 32.5, 34.0, 56.0)) return 4;
 
-  /// Attempts to resolve a calculation method from coordinates by
-  /// reverse-geocoding to a country code. Returns null on any failure,
-  /// so the caller can fall back to a default.
-  static Future<int?> resolveFromCoordinates(
-      double latitude, double longitude) async {
-    try {
-      final placemarks =
-          await placemarkFromCoordinates(latitude, longitude);
-      if (placemarks.isEmpty) return null;
-      final code = placemarks.first.isoCountryCode;
-      if (code == null) return null;
-      return _byCountryCode[code.toUpperCase()];
-    } catch (_) {
-      return null;
-    }
+    // Gulf states (UAE, Qatar, Bahrain, Kuwait, Oman) -> Gulf Region
+    if (_inBox(lat, lng, 16.0, 30.0, 47.0, 60.0)) return 8;
+
+    // Egypt -> Egyptian General Authority
+    if (_inBox(lat, lng, 22.0, 32.0, 24.0, 37.0)) return 5;
+
+    // Turkey -> Diyanet
+    if (_inBox(lat, lng, 36.0, 42.5, 25.0, 45.0)) return 13;
+
+    // South Asia (Pakistan, India, Bangladesh, Afghanistan) -> Karachi
+    if (_inBox(lat, lng, 5.0, 38.0, 60.0, 93.0)) return 1;
+
+    // North America (USA, Canada) -> ISNA
+    if (_inBox(lat, lng, 14.0, 72.0, -170.0, -52.0)) return 2;
+
+    // France -> UOIF
+    if (_inBox(lat, lng, 41.0, 51.5, -5.5, 9.5)) return 12;
+
+    // Southeast Asia (Indonesia, Malaysia, Singapore) -> MWL works well;
+    // kept as fallback below rather than a distinct id here.
+
+    // Default: Muslim World League
+    return 3;
+  }
+
+  static bool _inBox(
+    double lat,
+    double lng,
+    double minLat,
+    double maxLat,
+    double minLng,
+    double maxLng,
+  ) {
+    return lat >= minLat &&
+        lat <= maxLat &&
+        lng >= minLng &&
+        lng <= maxLng;
   }
 }
