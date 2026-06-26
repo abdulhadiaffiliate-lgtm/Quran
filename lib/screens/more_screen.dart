@@ -6,6 +6,7 @@ import 'tasbih_screen.dart';
 import 'notification_settings_screen.dart';
 import 'purification_screen.dart';
 import 'rakat_screen.dart';
+import 'dua_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -20,6 +21,17 @@ class MoreScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _tile(
+              context,
+              icon: Icons.auto_stories_rounded,
+              title: 'Dua & Azkar',
+              subtitle: 'Daily supplications & remembrance',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DuaScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
             _tile(
               context,
               icon: Icons.water_drop_rounded,

@@ -180,7 +180,10 @@ class _GoalsCardState extends State<GoalsCard> {
                             size: 16,
                             color: done
                                 ? AppColors.success
-                                : AppColors.textOnDarkSecondary,
+                                : Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color,
                           ),
                           const SizedBox(height: 4),
                           Text(

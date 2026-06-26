@@ -70,12 +70,38 @@ class _PurificationScreenState extends State<PurificationScreen>
     );
   }
 
+  IconData _iconFor(String? key) {
+    switch (key) {
+      case 'hands':
+        return Icons.back_hand_rounded;
+      case 'mouth':
+        return Icons.water_drop_rounded;
+      case 'nose':
+        return Icons.air_rounded;
+      case 'face':
+        return Icons.face_rounded;
+      case 'arm':
+        return Icons.front_hand_rounded;
+      case 'head':
+        return Icons.psychology_rounded;
+      case 'ears':
+        return Icons.hearing_rounded;
+      case 'foot':
+        return Icons.directions_walk_rounded;
+      case 'done':
+        return Icons.check_circle_rounded;
+      default:
+        return Icons.water_drop_rounded;
+    }
+  }
+
   Widget _stepsList(List<Map<String, String>> steps) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: steps.length,
       itemBuilder: (context, i) {
         final text = _urdu ? steps[i]['ur']! : steps[i]['en']!;
+        final hasIcon = steps[i].containsKey('icon');
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -83,46 +109,72 @@ class _PurificationScreenState extends State<PurificationScreen>
             color: Theme.of(context).cardTheme.color,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            textDirection:
-                _urdu ? TextDirection.rtl : TextDirection.ltr,
+          child: Column(
             children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '${i + 1}',
-                  style: const TextStyle(
-                    color: AppColors.gold,
-                    fontWeight: FontWeight.w700,
+              if (hasIcon)
+                Container(
+                  width: 64,
+                  height: 64,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        AppColors.tealPrimary,
+                        AppColors.tealPrimaryLight
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _iconFor(steps[i]['icon']),
+                    color: AppColors.goldLight,
+                    size: 32,
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  text,
-                  textAlign: _urdu ? TextAlign.right : TextAlign.left,
-                  textDirection:
-                      _urdu ? TextDirection.rtl : TextDirection.ltr,
-                  style: _urdu
-                      ? AppTheme.arabicStyle(
-                          color:
-                              Theme.of(context).textTheme.bodyLarge!.color!,
-                          fontSize: 18,
-                          height: 1.8,
-                        )
-                      : Theme.of(context)
-                          .textTheme
-                          .bodyLarge
-                          ?.copyWith(height: 1.5),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                textDirection:
+                    _urdu ? TextDirection.rtl : TextDirection.ltr,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        color: AppColors.gold,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      text,
+                      textAlign: _urdu ? TextAlign.right : TextAlign.left,
+                      textDirection:
+                          _urdu ? TextDirection.rtl : TextDirection.ltr,
+                      style: _urdu
+                          ? AppTheme.arabicStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge!
+                                  .color!,
+                              fontSize: 18,
+                              height: 1.8,
+                            )
+                          : Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(height: 1.5),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

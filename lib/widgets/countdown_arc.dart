@@ -33,8 +33,8 @@ class CountdownArc extends StatelessWidget {
                 children: [
                   Text(
                     remainingLabel,
-                    style: const TextStyle(
-                      color: AppColors.textOnDarkPrimary,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                       fontSize: 40,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -1,
@@ -43,8 +43,8 @@ class CountdownArc extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'at $nextTimeLabel',
-                    style: const TextStyle(
-                      color: AppColors.textOnDarkSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodySmall?.color,
                       fontSize: 14,
                     ),
                   ),

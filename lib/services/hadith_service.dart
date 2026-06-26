@@ -62,15 +62,15 @@ class HadithService {
   }
 
   /// Returns a deterministic "hadith of the day" — same hadith for everyone
-  /// on a given calendar day, rotating daily.
+  /// on a given calendar day, rotating daily. Restricted to the two Sahih
+  /// collections (Bukhari & Muslim) so only authentic hadith are shown.
   static Future<Hadith> getDailyHadith() async {
-    // Use day-of-year to pick a book and a number deterministically.
     final now = DateTime.now();
-    final dayOfYear =
-        now.difference(DateTime(now.year, 1, 1)).inDays + 1;
+    final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
 
-    final bookNames = books.keys.toList();
-    final bookName = bookNames[dayOfYear % bookNames.length];
+    // Only authentic (Sahih) collections for the daily hadith.
+    const authenticBooks = ['Sahih Bukhari', 'Sahih Muslim'];
+    final bookName = authenticBooks[dayOfYear % authenticBooks.length];
     final maxCount = books[bookName]!.count;
     // Keep number in a safe lower range to avoid gaps in sparse editions.
     final number = (dayOfYear * 7) % (maxCount > 2000 ? 2000 : maxCount) + 1;

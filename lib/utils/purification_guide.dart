@@ -1,47 +1,53 @@
 /// Step-by-step Wudu (ablution) and Ghusl (full purification) guides,
 /// in English and Urdu. Content is kept as plain data so the UI can
-/// switch languages with a toggle.
+/// switch languages with a toggle. Wudu steps carry an `icon` key used
+/// to render a matching illustration.
 class PurificationGuide {
   PurificationGuide._();
 
   static const List<Map<String, String>> wudu = [
     {
-      'en': 'Make the intention (niyyah) in your heart to perform wudu for purification.',
-      'ur': 'دل میں وضو کی نیت کریں کہ آپ پاکیزگی کے لیے وضو کر رہے ہیں۔',
-    },
-    {
+      'icon': 'hands',
       'en': 'Say "Bismillah" and wash both hands up to the wrists three times.',
       'ur': '"بسم اللہ" کہیں اور دونوں ہاتھ پہنچوں تک تین مرتبہ دھوئیں۔',
     },
     {
+      'icon': 'mouth',
       'en': 'Rinse the mouth three times, swirling water around.',
       'ur': 'تین مرتبہ کلی کریں اور منہ میں پانی اچھی طرح گھمائیں۔',
     },
     {
+      'icon': 'nose',
       'en': 'Sniff water into the nostrils and blow it out, three times.',
       'ur': 'تین مرتبہ ناک میں پانی چڑھائیں اور صاف کریں۔',
     },
     {
+      'icon': 'face',
       'en': 'Wash the entire face three times, from forehead to chin and ear to ear.',
       'ur': 'پورا چہرہ تین مرتبہ دھوئیں، پیشانی سے ٹھوڑی تک اور ایک کان سے دوسرے کان تک۔',
     },
     {
+      'icon': 'arm',
       'en': 'Wash the right arm up to and including the elbow three times, then the left.',
       'ur': 'دایاں بازو کہنی سمیت تین مرتبہ دھوئیں، پھر بایاں بازو اسی طرح۔',
     },
     {
+      'icon': 'head',
       'en': 'Wipe the head (masah) once with wet hands, from front to back.',
       'ur': 'گیلے ہاتھوں سے ایک مرتبہ سر کا مسح کریں، آگے سے پیچھے کی طرف۔',
     },
     {
+      'icon': 'ears',
       'en': 'Wipe the inside and outside of both ears once with wet fingers.',
       'ur': 'گیلی انگلیوں سے دونوں کانوں کے اندر اور باہر ایک مرتبہ مسح کریں۔',
     },
     {
+      'icon': 'foot',
       'en': 'Wash the right foot up to and including the ankle three times, then the left.',
       'ur': 'دایاں پاؤں ٹخنے سمیت تین مرتبہ دھوئیں، پھر بایاں پاؤں اسی طرح۔',
     },
     {
+      'icon': 'done',
       'en': 'Wudu is complete. It is recommended to recite the Shahadah afterwards.',
       'ur': 'وضو مکمل ہو گیا۔ اس کے بعد کلمہ شہادت پڑھنا مستحب ہے۔',
     },
