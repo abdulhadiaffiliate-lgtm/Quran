@@ -101,6 +101,13 @@ jobs:
               print("Desugaring enabled (Groovy DSL).")
           PY
 
+      - name: Debug - show build.gradle content
+        run: |
+          echo "--- Files present ---"
+          ls -la android/app/build.gradle* 2>/dev/null
+          echo "--- Full content ---"
+          cat android/app/build.gradle.kts 2>/dev/null || cat android/app/build.gradle 2>/dev/null
+
       - name: Bump compileSdk for geocoding compatibility
         run: |
           python3 - <<'PY'
@@ -112,9 +119,14 @@ jobs:
           with open(path) as f:
               content = f.read()
 
+          print("=== Lines mentioning Sdk BEFORE ===")
+          for line in content.splitlines():
+              if 'Sdk' in line:
+                  print(repr(line))
+
           if path == kts:
               new_content = re.sub(
-                  r'compileSdk\s*=\s*(flutter\.compileSdkVersion|\d+)',
+                  r'compileSdk\s*=?\s*(flutter\.compileSdkVersion|\d+)',
                   'compileSdk = 36',
                   content,
                   count=1,
@@ -127,12 +139,16 @@ jobs:
                   count=1,
               )
 
-          if new_content != content:
-              with open(path, "w") as f:
-                  f.write(new_content)
-              print("compileSdk bumped to 36.")
-          else:
-              print("No compileSdk line matched; leaving as-is.")
+          changed = new_content != content
+          print("=== Regex changed file:", changed, "===")
+
+          with open(path, "w") as f:
+              f.write(new_content)
+
+          print("=== Lines mentioning Sdk AFTER ===")
+          for line in new_content.splitlines():
+              if 'Sdk' in line:
+                  print(repr(line))
           PY
 
       - name: Get dependencies
