@@ -25,16 +25,11 @@ jobs:
       - name: Show Flutter version
         run: flutter --version
 
-      # Our repo contains lib/, pubspec.yaml, assets/, and the workflow.
-      # Regenerate the platform folders (android/ios/etc.) which aren't
-      # committed, without overwriting our existing files.
       - name: Generate platform scaffolding
         run: flutter create . --org com.namazalert --project-name namaz_alert --platforms=android
 
       - name: Add required permissions to AndroidManifest
         run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          # Insert permissions right after the opening <manifest> tag.
           python3 - <<'PY'
           path = "android/app/src/main/AndroidManifest.xml"
           with open(path) as f:
@@ -71,7 +66,6 @@ jobs:
           if "isCoreLibraryDesugaringEnabled" in content or "coreLibraryDesugaringEnabled" in content:
               print("Desugaring already enabled.")
           elif path == kts:
-              # Kotlin DSL
               content = content.replace(
                   "compileOptions {",
                   "compileOptions {\n        isCoreLibraryDesugaringEnabled = true",
@@ -89,7 +83,6 @@ jobs:
                   f.write(content)
               print("Desugaring enabled (Kotlin DSL).")
           else:
-              # Groovy DSL
               content = content.replace(
                   "compileOptions {",
                   "compileOptions {\n        coreLibraryDesugaringEnabled true",
@@ -106,6 +99,40 @@ jobs:
               with open(path, "w") as f:
                   f.write(content)
               print("Desugaring enabled (Groovy DSL).")
+          PY
+
+      - name: Bump compileSdk for geocoding compatibility
+        run: |
+          python3 - <<'PY'
+          import os, re
+
+          kts = "android/app/build.gradle.kts"
+          groovy = "android/app/build.gradle"
+          path = kts if os.path.exists(kts) else groovy
+          with open(path) as f:
+              content = f.read()
+
+          if path == kts:
+              new_content = re.sub(
+                  r'compileSdk\s*=\s*(flutter\.compileSdkVersion|\d+)',
+                  'compileSdk = 36',
+                  content,
+                  count=1,
+              )
+          else:
+              new_content = re.sub(
+                  r'compileSdkVersion\s+(flutter\.compileSdkVersion|\d+)',
+                  'compileSdkVersion 36',
+                  content,
+                  count=1,
+              )
+
+          if new_content != content:
+              with open(path, "w") as f:
+                  f.write(new_content)
+              print("compileSdk bumped to 36.")
+          else:
+              print("No compileSdk line matched; leaving as-is.")
           PY
 
       - name: Get dependencies
