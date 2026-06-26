@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/theme_provider.dart';
 import 'tasbih_screen.dart';
+import 'notification_settings_screen.dart';
+import 'purification_screen.dart';
+import 'rakat_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -17,6 +20,28 @@ class MoreScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _tile(
+              context,
+              icon: Icons.water_drop_rounded,
+              title: 'Wudu & Ghusl',
+              subtitle: 'Step-by-step guide (English / Urdu)',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PurificationScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _tile(
+              context,
+              icon: Icons.format_list_numbered_rounded,
+              title: 'Rakats per prayer',
+              subtitle: 'Sunnah, Fard & Witr (Hanafi / Shafi\'i)',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RakatScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
             _tile(
               context,
               icon: Icons.radio_button_checked_rounded,
@@ -47,8 +72,12 @@ class MoreScreen extends StatelessWidget {
               context,
               icon: Icons.notifications_active_rounded,
               title: 'Prayer notifications',
-              subtitle: 'Adhan and reminder settings',
-              onTap: () => _comingSoon(context),
+              subtitle: 'Choose how you are notified',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const NotificationSettingsScreen()),
+              ),
             ),
             const SizedBox(height: 12),
             _tile(
@@ -83,12 +112,6 @@ class MoreScreen extends StatelessWidget {
     );
   }
 
-  void _comingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Coming in a future update')),
-    );
-  }
-
   void _showAbout(BuildContext context) {
     showAboutDialog(
       context: context,
@@ -96,9 +119,29 @@ class MoreScreen extends StatelessWidget {
       applicationVersion: '1.0.0',
       children: [
         const Text(
-          'Prayer times, Qibla, Quran, Hadith, Tasbih, and daily reminders. '
-          'Prayer data from AlAdhan; Quran from Al Quran Cloud; Hadith from the '
-          'open hadith-api project.',
+          'SalahSync was made to be a quiet companion on your journey — '
+          'to help you keep your prayers, stay close to the Quran, and '
+          'carry a little remembrance through your day. May it be of '
+          'benefit to you, and a means of good.',
+          style: TextStyle(height: 1.5),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Prayer times from AlAdhan · Quran from Al Quran Cloud · '
+          'Hadith from the open hadith-api project.',
+          style: TextStyle(fontSize: 12, height: 1.4),
+        ),
+        const SizedBox(height: 20),
+        Opacity(
+          opacity: 0.4,
+          child: Text(
+            'Developed by Abdulhadi',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+            ),
+          ),
         ),
       ],
     );
