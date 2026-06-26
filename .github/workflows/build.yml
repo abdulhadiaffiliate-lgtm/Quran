@@ -22,6 +22,17 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Install Android SDK Platform 36
+        run: |
+          ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -f "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_SDK_ROOT" -name "sdkmanager" 2>/dev/null | head -1)
+          fi
+          echo "Using sdkmanager at: $SDKMANAGER"
+          yes | "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" || true
+          yes | "$SDKMANAGER" --licenses || true
+
       - name: Show Flutter version
         run: flutter --version
 
@@ -100,13 +111,6 @@ jobs:
                   f.write(content)
               print("Desugaring enabled (Groovy DSL).")
           PY
-
-      - name: Debug - show build.gradle content
-        run: |
-          echo "--- Files present ---"
-          ls -la android/app/build.gradle* 2>/dev/null
-          echo "--- Full content ---"
-          cat android/app/build.gradle.kts 2>/dev/null || cat android/app/build.gradle 2>/dev/null
 
       - name: Bump compileSdk for geocoding compatibility
         run: |
