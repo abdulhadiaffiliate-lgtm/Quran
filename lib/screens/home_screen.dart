@@ -300,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Good deed for today',
+                    'One good thing today',
                     style: TextStyle(
                       color: AppColors.gold,
                       fontSize: 13,

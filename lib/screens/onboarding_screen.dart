@@ -164,7 +164,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.mosque_rounded,
       title: 'Welcome to SalahSync',
       body:
-          'Your daily companion for prayer times, Qibla, Quran, Hadith, and dhikr — all in one calm, focused place.',
+          'Everything you need for the day in one place — prayer times, Qibla, the Quran, hadith, and your dhikr. Let\'s set it up the way that works for you.',
       action: _primaryButton('Get started', _next),
     );
   }
@@ -174,7 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.location_on_rounded,
       title: 'Enable location',
       body:
-          'SalahSync uses your location to calculate accurate prayer times and the correct Qibla direction for where you are. Your location stays on your device.',
+          'To get your prayer times and Qibla right, SalahSync needs to know roughly where you are. It stays on your phone — nowhere else.',
       action: Column(
         children: [
           _primaryButton('Allow location', _requestLocation),
@@ -193,7 +193,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.notifications_active_rounded,
       title: 'Prayer notifications',
       body:
-          'Allow notifications so SalahSync can remind you when each prayer time arrives.',
+          'Turn on notifications and SalahSync will give you a nudge when it\'s time to pray.',
       action: Column(
         children: [
           _primaryButton('Allow notifications', _requestNotifications),
@@ -313,7 +313,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.check_circle_rounded,
       title: 'You\'re all set',
       body:
-          'May SalahSync help you stay consistent and connected. Tap below to begin.',
+          'That\'s everything. May Allah make it easy for you to keep every prayer. Tap below to begin.',
       action: _primaryButton('Enter SalahSync', _finish),
     );
   }

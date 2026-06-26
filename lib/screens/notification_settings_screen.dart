@@ -80,7 +80,7 @@ class _NotificationSettingsScreenState
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Scheduled prayer reminders are coming in a future update. Your preference is saved and will apply then.',
+                            'Timed prayer reminders aren\'t live just yet — they\'re on the way. Whatever you pick here will be ready when they land.',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),

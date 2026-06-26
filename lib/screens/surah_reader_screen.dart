@@ -305,6 +305,15 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Text(
+                '${widget.surahMeta.nameEnglish} $surahNumber:${ayah.numberInSurah}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const Spacer(),
               if (ayah.audioUrl != null)
                 IconButton(

@@ -59,8 +59,8 @@ class DailyPopup extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               streak <= 1
-                  ? 'Welcome — your journey begins today.'
-                  : 'Maa shaa Allah, keep it going!',
+                  ? 'Good to have you here. Day one — let\'s go.'
+                  : 'Maa shaa Allah — you keep showing up. Don\'t stop.',
               style: TextStyle(
                 color: isDark
                     ? AppColors.textOnDarkSecondary
@@ -110,6 +110,18 @@ class DailyPopup extends StatelessWidget {
                   .bodyMedium
                   ?.copyWith(height: 1.5),
             ),
+            if (dua['reference'] != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                dua['reference']!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
             const SizedBox(height: 22),
             SizedBox(
               width: double.infinity,

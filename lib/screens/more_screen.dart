@@ -131,10 +131,10 @@ class MoreScreen extends StatelessWidget {
       applicationVersion: '1.0.0',
       children: [
         const Text(
-          'SalahSync was made to be a quiet companion on your journey — '
-          'to help you keep your prayers, stay close to the Quran, and '
-          'carry a little remembrance through your day. May it be of '
-          'benefit to you, and a means of good.',
+          'SalahSync is here to make it a little easier to stay on top of '
+          'your prayers and keep some good in every day — your salah times, '
+          'the Quran, a hadith, a tasbih, all close at hand. May it be a '
+          'help to you, and a reason for good to reach whoever made it.',
           style: TextStyle(height: 1.5),
         ),
         const SizedBox(height: 16),
@@ -146,13 +146,27 @@ class MoreScreen extends StatelessWidget {
         const SizedBox(height: 20),
         Opacity(
           opacity: 0.4,
-          child: Text(
-            'Developed by Abdulhadi',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Developed by Abdulhadi',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Team: Rahim Nawaz, Hassan Qureshi',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                ),
+              ),
+            ],
           ),
         ),
       ],
