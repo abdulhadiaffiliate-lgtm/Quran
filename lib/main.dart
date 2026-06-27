@@ -4,6 +4,7 @@ import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/app_settings.dart';
 import 'services/streak_service.dart';
+import 'services/notification_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/quran_screen.dart';
 import 'screens/qibla_screen.dart';
@@ -14,6 +15,7 @@ import 'screens/daily_popup.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  NotificationService.init();
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),

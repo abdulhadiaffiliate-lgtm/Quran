@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/app_settings.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -67,6 +68,26 @@ class _NotificationSettingsScreenState
                     Icons.notifications_off_rounded,
                   ),
                   const SizedBox(height: 24),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.tealPrimary,
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    onPressed: () async {
+                      await NotificationService.requestPermissions();
+                      await NotificationService.showTestNotification();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Test notification sent'),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.notifications_active_rounded),
+                    label: const Text('Send a test notification'),
+                  ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -80,7 +101,7 @@ class _NotificationSettingsScreenState
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Timed prayer reminders aren\'t live just yet — they\'re on the way. Whatever you pick here will be ready when they land.',
+                            'Reminders are scheduled for each prayer time. On some phones you may need to allow "Alarms & reminders" and turn off battery optimization for SalahSync so they arrive on time.',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),

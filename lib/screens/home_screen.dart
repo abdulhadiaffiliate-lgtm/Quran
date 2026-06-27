@@ -6,6 +6,7 @@ import '../services/prayer_service.dart';
 import '../services/streak_service.dart';
 import '../services/app_settings.dart';
 import '../services/calc_method_resolver.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/good_deeds.dart';
 import '../widgets/countdown_arc.dart';
@@ -81,6 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _times = times;
         _loading = false;
       });
+      // Schedule prayer notifications for the loaded times.
+      NotificationService.schedulePrayers(times);
     } catch (e) {
       if (!mounted) return;
       setState(() {
