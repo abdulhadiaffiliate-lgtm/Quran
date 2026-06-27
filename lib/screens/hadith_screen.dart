@@ -4,6 +4,7 @@ import '../services/hadith_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/emotion_hadith_data.dart';
+import 'hadith_books_screen.dart';
 
 class HadithScreen extends StatefulWidget {
   const HadithScreen({super.key});
@@ -45,6 +46,47 @@ class _HadithScreenState extends State<HadithScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Browse books (tabbed search) entry point
+              Card(
+                child: ListTile(
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.library_books_rounded,
+                        color: AppColors.gold),
+                  ),
+                  title: const Text('Browse hadith books',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text(
+                      'Bukhari · Muslim · Abu Dawud · Tirmidhi'),
+                  trailing: const Icon(Icons.search_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const HadithBooksScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Hadith of the day',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              if (_error != null)
+                _buildError()
+              else if (_daily == null)
+                const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                _buildHadithCard(_daily!),
+              const SizedBox(height: 28),
               Text(
                 'How are you feeling?',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -60,21 +102,6 @@ class _HadithScreenState extends State<HadithScreen> {
                 const SizedBox(height: 16),
                 _buildEmotionCard(_selectedEmotion!),
               ],
-              const SizedBox(height: 28),
-              Text(
-                'Hadith of the day',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              if (_error != null)
-                _buildError()
-              else if (_daily == null)
-                const Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else
-                _buildHadithCard(_daily!),
             ],
           ),
         ),
@@ -213,6 +240,8 @@ class _HadithScreenState extends State<HadithScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const Spacer(),
+                GradeLabel(grade: h.grade),
               ],
             ),
             if (h.arabicText.isNotEmpty) ...[
@@ -239,25 +268,6 @@ class _HadithScreenState extends State<HadithScreen> {
                   .bodyLarge
                   ?.copyWith(height: 1.5),
             ),
-            if (h.grade != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  h.grade!,
-                  style: const TextStyle(
-                    color: AppColors.success,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

@@ -77,4 +77,78 @@ class HadithService {
 
     return getHadith(bookName: bookName, number: number);
   }
+
+  // The four collections exposed in the tabbed books view.
+  static const List<String> tabbedBooks = [
+    'Sahih Bukhari',
+    'Sahih Muslim',
+    'Abu Dawud',
+    'Tirmidhi',
+  ];
+
+  // In-memory cache of downloaded books (English + Arabic merged), keyed
+  // by book name, so a book is only downloaded once per app session.
+  static final Map<String, List<Hadith>> _bookCache = {};
+
+  /// Downloads an entire book (English text + grades, merged with Arabic
+  /// text) and caches it. Subsequent calls return the cached list.
+  static Future<List<Hadith>> loadWholeBook(String bookName) async {
+    if (_bookCache.containsKey(bookName)) {
+      return _bookCache[bookName]!;
+    }
+    final edition = books[bookName];
+    if (edition == null) throw Exception('Unknown book: $bookName');
+
+    final engUri = Uri.parse('$_base/editions/${edition.eng}.min.json');
+    final araUri = Uri.parse('$_base/editions/${edition.ara}.min.json');
+
+    final results = await Future.wait([http.get(engUri), http.get(araUri)]);
+    if (results[0].statusCode != 200) {
+      throw Exception('Failed to load book (${results[0].statusCode})');
+    }
+
+    final engHadiths = json.decode(results[0].body)['hadiths'] as List;
+
+    // Build a map of number -> arabic text for quick merge.
+    final Map<int, String> arabicByNumber = {};
+    if (results[1].statusCode == 200) {
+      final araHadiths = json.decode(results[1].body)['hadiths'] as List;
+      for (final h in araHadiths) {
+        final n = h['hadithnumber'];
+        if (n is int) arabicByNumber[n] = h['text'] ?? '';
+      }
+    }
+
+    final list = <Hadith>[];
+    for (final h in engHadiths) {
+      final number = h['hadithnumber'];
+      if (number is! int) continue;
+      list.add(Hadith(
+        number: number,
+        arabicText: arabicByNumber[number] ?? '',
+        englishText: h['text'] ?? '',
+        book: bookName,
+        grade: (h['grades'] != null && (h['grades'] as List).isNotEmpty)
+            ? h['grades'][0]['grade']
+            : null,
+      ));
+    }
+
+    _bookCache[bookName] = list;
+    return list;
+  }
+
+  /// Searches a book's hadith for a keyword (case-insensitive) in the
+  /// English text. Downloads the book first if not cached.
+  static Future<List<Hadith>> searchBook(
+    String bookName,
+    String query,
+  ) async {
+    final all = await loadWholeBook(bookName);
+    if (query.trim().isEmpty) return all;
+    final q = query.toLowerCase();
+    return all
+        .where((h) => h.englishText.toLowerCase().contains(q))
+        .toList();
+  }
 }
