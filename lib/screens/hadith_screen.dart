@@ -163,13 +163,16 @@ class _HadithScreenState extends State<HadithScreen> {
               children: [
                 Text(e.emoji, style: const TextStyle(fontSize: 20)),
                 const SizedBox(width: 8),
-                Text(
-                  'For when you feel ${e.emotion.toLowerCase()}',
-                  style: TextStyle(
-                    color: AppColors.gold,
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    'For when you feel ${e.emotion.toLowerCase()}',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+                const GradeLabel(grade: 'Sahih'),
               ],
             ),
             const SizedBox(height: 16),

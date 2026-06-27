@@ -3,6 +3,7 @@ class Hadith {
   final int number;
   final String arabicText;
   final String englishText;
+  final String? urduText;
   final String book;
   final String? grade;
 
@@ -10,6 +11,7 @@ class Hadith {
     required this.number,
     required this.arabicText,
     required this.englishText,
+    this.urduText,
     required this.book,
     this.grade,
   });

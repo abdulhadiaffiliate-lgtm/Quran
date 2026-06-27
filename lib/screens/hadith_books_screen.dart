@@ -115,7 +115,7 @@ class _BookTabState extends State<_BookTab>
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
-              hintText: 'Search ${widget.bookName} by word',
+              hintText: 'Search by word or hadith number',
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.arrow_forward_rounded),
@@ -209,14 +209,22 @@ class _BookTabState extends State<_BookTab>
   }
 }
 
-/// A hadith card showing reference and grade label. Reused look across
-/// the app's hadith displays.
-class _HadithTile extends StatelessWidget {
+/// A hadith card showing reference and grade label, with EN/Urdu toggle.
+class _HadithTile extends StatefulWidget {
   final Hadith hadith;
   const _HadithTile({required this.hadith});
 
   @override
+  State<_HadithTile> createState() => _HadithTileState();
+}
+
+class _HadithTileState extends State<_HadithTile> {
+  bool _showUrdu = false;
+
+  @override
   Widget build(BuildContext context) {
+    final hadith = widget.hadith;
+    final hasUrdu = hadith.urduText != null && hadith.urduText!.isNotEmpty;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -260,11 +268,48 @@ class _HadithTile extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
-          Text(
-            hadith.englishText,
-            style:
-                Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
-          ),
+          if (hasUrdu)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: () => setState(() => _showUrdu = !_showUrdu),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _showUrdu ? 'اردو' : 'EN',
+                    style: const TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          _showUrdu && hasUrdu
+              ? Text(
+                  hadith.urduText!,
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  style: AppTheme.arabicStyle(
+                    color: Theme.of(context).textTheme.bodyLarge!.color!,
+                    fontSize: 17,
+                    height: 1.8,
+                  ),
+                )
+              : Text(
+                  hadith.englishText,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(height: 1.5),
+                ),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import 'notification_settings_screen.dart';
 import 'purification_screen.dart';
 import 'rakat_screen.dart';
 import 'dua_screen.dart';
+import 'quiz_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -51,6 +52,17 @@ class MoreScreen extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const RakatScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _tile(
+              context,
+              icon: Icons.quiz_rounded,
+              title: 'Islamic Quiz',
+              subtitle: 'Test your knowledge — easy to hard',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QuizScreen()),
               ),
             ),
             const SizedBox(height: 12),
@@ -139,8 +151,10 @@ class MoreScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'Prayer times from AlAdhan · Quran from Al Quran Cloud · '
-          'Hadith from the open hadith-api project.',
+          'Data sources, with thanks: prayer times & Qibla from AlAdhan; '
+          'Quran text, translations & recitation from Al Quran Cloud; '
+          'hadith from the fawazahmed0 open hadith-api (CC BY-NC). '
+          'SalahSync is free and non-commercial.',
           style: TextStyle(fontSize: 12, height: 1.4),
         ),
         const SizedBox(height: 20),

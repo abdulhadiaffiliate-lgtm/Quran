@@ -10,14 +10,56 @@ class HadithService {
 
   /// A small curated set of editions we expose in the UI.
   /// Each entry maps a friendly book name to its English + Arabic edition slugs.
-  static const Map<String, ({String eng, String ara, int count})> books = {
-    'Sahih Bukhari': (eng: 'eng-bukhari', ara: 'ara-bukhari', count: 7563),
-    'Sahih Muslim': (eng: 'eng-muslim', ara: 'ara-muslim', count: 7563),
-    'Abu Dawud': (eng: 'eng-abudawud', ara: 'ara-abudawud', count: 5274),
-    'Tirmidhi': (eng: 'eng-tirmidhi', ara: 'ara-tirmidhi', count: 3956),
-    'Ibn Majah': (eng: 'eng-ibnmajah', ara: 'ara-ibnmajah', count: 4341),
-    'Nasai': (eng: 'eng-nasai', ara: 'ara-nasai', count: 5662),
+  static const Map<String, ({String eng, String ara, String urd, int count})>
+      books = {
+    'Sahih Bukhari': (
+      eng: 'eng-bukhari',
+      ara: 'ara-bukhari',
+      urd: 'urd-bukhari',
+      count: 7563
+    ),
+    'Sahih Muslim': (
+      eng: 'eng-muslim',
+      ara: 'ara-muslim',
+      urd: 'urd-muslim',
+      count: 7563
+    ),
+    'Abu Dawud': (
+      eng: 'eng-abudawud',
+      ara: 'ara-abudawud',
+      urd: 'urd-abudawud',
+      count: 5274
+    ),
+    'Tirmidhi': (
+      eng: 'eng-tirmidhi',
+      ara: 'ara-tirmidhi',
+      urd: 'urd-tirmidhi',
+      count: 3956
+    ),
+    'Ibn Majah': (
+      eng: 'eng-ibnmajah',
+      ara: 'ara-ibnmajah',
+      urd: 'urd-ibnmajah',
+      count: 4341
+    ),
+    'Nasai': (
+      eng: 'eng-nasai',
+      ara: 'ara-nasai',
+      urd: 'urd-nasai',
+      count: 5662
+    ),
   };
+
+  /// Resolves a display grade for a hadith. Bukhari and Muslim are Sahih by
+  /// scholarly consensus, so when their grade data is empty we label them
+  /// Sahih. For other books, we read the API's grade if present.
+  static String? resolveGrade(String bookName, String? rawGrade) {
+    if (rawGrade != null && rawGrade.trim().isNotEmpty) return rawGrade;
+    if (bookName == 'Sahih Bukhari' || bookName == 'Sahih Muslim') {
+      return 'Sahih';
+    }
+    return null;
+  }
 
   /// Fetches a single hadith by number from a given book, combining the
   /// English and Arabic editions.
@@ -54,10 +96,13 @@ class HadithService {
       arabicText: arabicText,
       englishText: engHadith['text'] ?? '',
       book: bookName,
-      grade: (engHadith['grades'] != null &&
-              (engHadith['grades'] as List).isNotEmpty)
-          ? engHadith['grades'][0]['grade']
-          : null,
+      grade: resolveGrade(
+        bookName,
+        (engHadith['grades'] != null &&
+                (engHadith['grades'] as List).isNotEmpty)
+            ? engHadith['grades'][0]['grade']
+            : null,
+      ),
     );
   }
 
@@ -101,8 +146,13 @@ class HadithService {
 
     final engUri = Uri.parse('$_base/editions/${edition.eng}.min.json');
     final araUri = Uri.parse('$_base/editions/${edition.ara}.min.json');
+    final urdUri = Uri.parse('$_base/editions/${edition.urd}.min.json');
 
-    final results = await Future.wait([http.get(engUri), http.get(araUri)]);
+    final results = await Future.wait([
+      http.get(engUri),
+      http.get(araUri),
+      http.get(urdUri),
+    ]);
     if (results[0].statusCode != 200) {
       throw Exception('Failed to load book (${results[0].statusCode})');
     }
@@ -119,6 +169,16 @@ class HadithService {
       }
     }
 
+    // Build a map of number -> urdu text.
+    final Map<int, String> urduByNumber = {};
+    if (results[2].statusCode == 200) {
+      final urdHadiths = json.decode(results[2].body)['hadiths'] as List;
+      for (final h in urdHadiths) {
+        final n = h['hadithnumber'];
+        if (n is int) urduByNumber[n] = h['text'] ?? '';
+      }
+    }
+
     final list = <Hadith>[];
     for (final h in engHadiths) {
       final number = h['hadithnumber'];
@@ -127,10 +187,14 @@ class HadithService {
         number: number,
         arabicText: arabicByNumber[number] ?? '',
         englishText: h['text'] ?? '',
+        urduText: urduByNumber[number],
         book: bookName,
-        grade: (h['grades'] != null && (h['grades'] as List).isNotEmpty)
-            ? h['grades'][0]['grade']
-            : null,
+        grade: resolveGrade(
+          bookName,
+          (h['grades'] != null && (h['grades'] as List).isNotEmpty)
+              ? h['grades'][0]['grade']
+              : null,
+        ),
       ));
     }
 
@@ -138,15 +202,25 @@ class HadithService {
     return list;
   }
 
-  /// Searches a book's hadith for a keyword (case-insensitive) in the
-  /// English text. Downloads the book first if not cached.
+  /// Searches a book's hadith. If [query] is a number, returns that specific
+  /// hadith by its number. Otherwise does a case-insensitive keyword search
+  /// in the English text. Downloads the book first if not cached.
   static Future<List<Hadith>> searchBook(
     String bookName,
     String query,
   ) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    // If the query is purely a number, look up that hadith number directly.
+    final asNumber = int.tryParse(trimmed);
+    if (asNumber != null) {
+      final all = await loadWholeBook(bookName);
+      return all.where((h) => h.number == asNumber).toList();
+    }
+
     final all = await loadWholeBook(bookName);
-    if (query.trim().isEmpty) return all;
-    final q = query.toLowerCase();
+    final q = trimmed.toLowerCase();
     return all
         .where((h) => h.englishText.toLowerCase().contains(q))
         .toList();
