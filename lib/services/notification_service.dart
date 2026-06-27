@@ -1,7 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
-import 'package:flutter_timezone/flutter_timezone.dart';
 import '../models/prayer_times.dart';
 import 'app_settings.dart';
 
@@ -18,12 +17,13 @@ class NotificationService {
     if (_initialized) return;
 
     tzdata.initializeTimeZones();
-    // Use the device's actual IANA timezone for accurate scheduling.
+    // Pick a tz location whose current UTC offset matches the device's,
+    // so scheduled times line up with local wall-clock time without
+    // needing a native timezone plugin.
     try {
-      final String localZone = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(localZone));
+      tz.setLocalLocation(_locationForCurrentOffset());
     } catch (_) {
-      // Fallback: default location. Scheduling still uses local DateTime.
+      // Fallback to UTC; scheduling still proceeds.
     }
 
     const androidInit =
@@ -36,6 +36,20 @@ class NotificationService {
 
     await _plugin.initialize(initSettings);
     _initialized = true;
+  }
+
+  /// Finds a timezone database location whose current offset matches the
+  /// device's current UTC offset. Good enough for prayer scheduling.
+  static tz.Location _locationForCurrentOffset() {
+    final deviceOffset = DateTime.now().timeZoneOffset;
+    final now = DateTime.now().toUtc();
+    for (final loc in tz.timeZoneDatabase.locations.values) {
+      final tzNow = tz.TZDateTime.from(now, loc);
+      if (tzNow.timeZoneOffset == deviceOffset) {
+        return loc;
+      }
+    }
+    return tz.getLocation('UTC');
   }
 
   /// Requests notification permission (Android 13+ / iOS).

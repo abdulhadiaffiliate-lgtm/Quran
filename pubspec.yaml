@@ -28,7 +28,6 @@ dependencies:
   # Notifications for prayer alerts and daily reminders
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
-  flutter_timezone: ^3.0.1
 
   # Audio playback for adhan
   audioplayers: ^6.0.0
