@@ -153,7 +153,9 @@ class MoreScreen extends StatelessWidget {
         const Text(
           'Data sources, with thanks: prayer times & Qibla from AlAdhan; '
           'Quran text, translations & recitation from Al Quran Cloud; '
-          'hadith from the fawazahmed0 open hadith-api (CC BY-NC). '
+          'hadith from the fawazahmed0 open hadith-api (CC BY-NC); '
+          'tafseer from spa5k tafsir_api (Ibn Kathir & Dr. Israr Ahmad); '
+          'word-by-word data from the open holy-quran-word-by-word dataset. '
           'SalahSync is free and non-commercial.',
           style: TextStyle(fontSize: 12, height: 1.4),
         ),

@@ -5,6 +5,7 @@ import '../services/quran_service.dart';
 import '../services/app_settings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import 'learn_ayah_screen.dart';
 
 class SurahReaderScreen extends StatefulWidget {
   final Surah surahMeta;
@@ -315,6 +316,21 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ),
               ),
               const Spacer(),
+              IconButton(
+                tooltip: 'Learn this ayah',
+                icon: const Icon(Icons.school_rounded, color: AppColors.gold),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LearnAyahScreen(
+                      surahNumber: surahNumber,
+                      surahName: widget.surahMeta.nameEnglish,
+                      ayahNumber: ayah.numberInSurah,
+                      arabicText: arabic,
+                    ),
+                  ),
+                ),
+              ),
               if (ayah.audioUrl != null)
                 IconButton(
                   icon: Icon(
