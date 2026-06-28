@@ -7,6 +7,7 @@ import '../services/app_settings.dart';
 import '../services/quran_progress_service.dart';
 import '../services/reciter_service.dart';
 import '../services/ayah_timing_service.dart';
+import '../services/offline_audio_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'learn_ayah_screen.dart';
@@ -76,9 +77,43 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
         if (!mounted || withAudio == null) return;
         setState(() => _full = withAudio);
       });
+
+      _checkDownloadStatus();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _checkDownloadStatus() async {
+    final downloaded = await OfflineAudioService.isDownloaded(
+        widget.surahMeta.number, _reciterId);
+    if (!mounted) return;
+    setState(() => _isDownloaded = downloaded);
+  }
+
+  Future<void> _downloadForOffline() async {
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = null;
+    });
+    final success = await OfflineAudioService.downloadSurah(
+      widget.surahMeta.number,
+      _reciterId,
+      onProgress: (p) {
+        if (mounted) setState(() => _downloadProgress = p);
+      },
+    );
+    if (!mounted) return;
+    setState(() {
+      _isDownloading = false;
+      _isDownloaded = success;
+      _downloadProgress = null;
+    });
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not download — check your connection')),
+      );
     }
   }
 
@@ -212,6 +247,9 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   }
 
   bool _bufferingFullSurah = false;
+  bool _isDownloaded = false;
+  bool _isDownloading = false;
+  double? _downloadProgress;
 
   Future<void> _playWholeSurah() async {
     if (_playingAll) {
@@ -227,13 +265,18 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     }
 
     await _player.stop();
-    setState(() => _bufferingFullSurah = true);
 
-    // Use a single continuous full-surah audio file (no per-ayah gaps),
-    // instead of chaining individual ayah clips, which used to cause
-    // audible stutter between verses.
-    final url = ReciterService.fullSurahUrl(
-        _reciterId, widget.surahMeta.number);
+    // Prefer an offline source (bundled short surah, or previously
+    // downloaded) over streaming — instant start, no network wait.
+    final offlinePath = await OfflineAudioService.getOfflineSource(
+        widget.surahMeta.number, _reciterId);
+    final usingOffline = offlinePath != null;
+
+    // Only show the buffering spinner when we'll actually need to wait
+    // on a network stream; offline playback starts immediately.
+    if (!usingOffline) {
+      setState(() => _bufferingFullSurah = true);
+    }
 
     // Start buffering/playback and loading the timing data (if this
     // reciter has any) at the same time, instead of one after another,
@@ -269,14 +312,37 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     });
 
     // Kick off playback right away; don't wait on the timing fetch.
-    final playFuture = _player.play(UrlSource(url));
+    // Use the offline file if we have one, otherwise stream from the CDN.
+    final playFuture = usingOffline
+        ? _player.play(DeviceFileSource(offlinePath))
+        : _player.play(UrlSource(ReciterService.fullSurahUrl(
+            _reciterId, widget.surahMeta.number)));
+
+    // Guard the play() call itself with a timeout — if it hangs (bad URL,
+    // unreachable host, stuck connection), don't let the UI sit on
+    // "Loading…" forever with no feedback.
+    playFuture.timeout(const Duration(seconds: 12)).catchError((error) {
+      if (!mounted) return;
+      if (_playingAll && _bufferingFullSurah) {
+        setState(() {
+          _playingAll = false;
+          _bufferingFullSurah = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not play this surah. Check your connection and try again.'),
+          ),
+        );
+      }
+    });
 
     _ayahStartTimes = await timingFuture;
-    await playFuture;
 
-    // Safety: if no position event arrives within a few seconds (e.g.
-    // very slow connection), stop showing the buffering spinner anyway
-    // so the UI doesn't look stuck forever.
+    // Independently of the play() call above, also clear the spinner if
+    // no position update has arrived after a few seconds — this runs
+    // concurrently (not after a blocking await), so it fires even if
+    // play() itself never resolves.
     Future.delayed(const Duration(seconds: 8), () {
       if (mounted && _bufferingFullSurah) {
         setState(() => _bufferingFullSurah = false);
@@ -433,6 +499,51 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ? 'Loading…'
                 : (_playingAll ? 'Stop' : 'Play whole surah')),
           ),
+          if (!OfflineAudioService.isBundled(
+              widget.surahMeta.number, _reciterId)) ...[
+            const SizedBox(height: 10),
+            if (_isDownloading)
+              Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: _downloadProgress,
+                    backgroundColor:
+                        AppColors.tealPrimary.withValues(alpha: 0.2),
+                    valueColor:
+                        const AlwaysStoppedAnimation(AppColors.gold),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _downloadProgress != null
+                        ? 'Downloading… ${(_downloadProgress! * 100).toStringAsFixed(0)}%'
+                        : 'Downloading…',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.gold),
+                  ),
+                ],
+              )
+            else if (_isDownloaded)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.offline_pin_rounded,
+                      size: 16, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  const Text('Available offline',
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.success)),
+                ],
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: _downloadForOffline,
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: const Text('Download for offline'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(40),
+                ),
+              ),
+          ],
         ],
       ),
     );

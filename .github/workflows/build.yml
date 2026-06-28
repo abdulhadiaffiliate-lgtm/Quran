@@ -222,7 +222,7 @@ jobs:
             echo "No KEYSTORE_BASE64 secret set — will fall back to debug signing."
             echo "HAS_KEYSTORE=false" >> $GITHUB_ENV
           else
-            echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            echo "$KEYSTORE_BASE64" | base64 -d > android/release.keystore
             echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
             echo "Keystore decoded."
           fi

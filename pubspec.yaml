@@ -59,6 +59,7 @@ flutter:
   assets:
     - assets/data/
     - assets/audio/
+    - assets/audio/surahs/
     - assets/wbw/
     - assets/quran/
     - assets/quran/ar/
