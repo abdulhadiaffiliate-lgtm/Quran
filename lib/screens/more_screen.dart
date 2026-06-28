@@ -8,6 +8,8 @@ import 'purification_screen.dart';
 import 'rakat_screen.dart';
 import 'dua_screen.dart';
 import 'quiz_screen.dart';
+import 'adhkar_screen.dart';
+import 'qada_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -30,6 +32,28 @@ class MoreScreen extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DuaScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _tile(
+              context,
+              icon: Icons.wb_twilight_rounded,
+              title: 'Morning & Evening Adhkar',
+              subtitle: 'Daily protection & remembrance',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdhkarScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _tile(
+              context,
+              icon: Icons.event_busy_rounded,
+              title: 'Missed Prayers (Qada)',
+              subtitle: 'Track prayers to make up',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QadaScreen()),
               ),
             ),
             const SizedBox(height: 12),

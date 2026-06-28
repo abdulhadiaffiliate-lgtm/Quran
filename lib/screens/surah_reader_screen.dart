@@ -3,6 +3,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../models/quran.dart';
 import '../services/quran_service.dart';
 import '../services/app_settings.dart';
+import '../services/quran_progress_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'learn_ayah_screen.dart';
@@ -51,6 +52,11 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           language: _language);
       if (!mounted) return;
       setState(() => _full = full);
+      QuranProgressService.saveLastRead(
+        surahNumber: widget.surahMeta.number,
+        surahName: widget.surahMeta.nameEnglish,
+        ayahNumber: 1,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
@@ -64,14 +70,61 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     _load();
   }
 
+  /// Strips Arabic diacritics (tashkeel) and normalizes Alef/Yeh variants
+  /// so text comparisons aren't broken by minor Unicode differences
+  /// between sources.
+  static String _normalizeArabic(String input) {
+    return input
+        // Remove combining diacritical marks (fatha, kasra, damma, etc.)
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '')
+        // Normalize different forms of Alef to a plain Alef.
+        .replaceAll(RegExp(r'[\u0622\u0623\u0625\u0671]'), '\u0627')
+        // Normalize Alef Wasla (ٱ) too.
+        .replaceAll('\u0671', '\u0627')
+        .trim();
+  }
+
   /// Strips a leading Bismillah from an ayah's Arabic text, since the
   /// Bismillah is shown separately in the surah header. Applies to the
   /// first ayah of every surah except Al-Fatihah (1), where Bismillah is
   /// itself a numbered verse, and At-Tawbah (9), which has no Bismillah.
+  ///
+  /// Matching is diacritic-insensitive so minor Unicode variations between
+  /// data sources don't cause the duplicate to slip through.
   String _cleanFirstAyah(String text, int surahNumber, int ayahNumber) {
     if (ayahNumber != 1) return text;
     if (surahNumber == 1 || surahNumber == 9) return text;
-    // Remove the bismillah prefix (with or without small variations).
+
+    final normalizedText = _normalizeArabic(text);
+    final normalizedBismillah = _normalizeArabic(_bismillah);
+
+    if (normalizedText.startsWith(normalizedBismillah)) {
+      // Walk the original text forward by the same number of "real"
+      // characters as matched, skipping diacritics, so we cut at the
+      // right point in the un-normalized string.
+      int matched = 0;
+      int cut = 0;
+      final n = text.length;
+      while (cut < n && matched < normalizedBismillah.length) {
+        final normalizedChar = _normalizeArabic(text[cut]);
+        if (normalizedChar.isNotEmpty) matched++;
+        cut++;
+      }
+      // Consume any trailing diacritics that belong to the last matched
+      // letter, plus any following space, so we don't leave a stray
+      // combining mark or leading space on the remaining text.
+      while (cut < n && RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]')
+          .hasMatch(text[cut])) {
+        cut++;
+      }
+      while (cut < n && text[cut] == ' ') {
+        cut++;
+      }
+      final stripped = text.substring(cut).trim();
+      return stripped.isEmpty ? text : stripped;
+    }
+
+    // Fallback: try removing a known-good literal variant directly.
     final stripped = text
         .replaceFirst(_bismillah, '')
         .replaceFirst('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', '')
@@ -316,6 +369,11 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ),
               ),
               const Spacer(),
+              _BookmarkButton(
+                surah: surahNumber,
+                ayah: ayah.numberInSurah,
+                surahName: widget.surahMeta.nameEnglish,
+              ),
               IconButton(
                 tooltip: 'Learn this ayah',
                 icon: const Icon(Icons.school_rounded, color: AppColors.gold),
@@ -373,6 +431,62 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// A small stateful bookmark toggle for an individual ayah.
+class _BookmarkButton extends StatefulWidget {
+  final int surah;
+  final int ayah;
+  final String surahName;
+  const _BookmarkButton({
+    required this.surah,
+    required this.ayah,
+    required this.surahName,
+  });
+
+  @override
+  State<_BookmarkButton> createState() => _BookmarkButtonState();
+}
+
+class _BookmarkButtonState extends State<_BookmarkButton> {
+  bool _bookmarked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final b =
+        await QuranProgressService.isBookmarked(widget.surah, widget.ayah);
+    if (!mounted) return;
+    setState(() => _bookmarked = b);
+  }
+
+  Future<void> _toggle() async {
+    final now = await QuranProgressService.toggleBookmark(
+      surah: widget.surah,
+      ayah: widget.ayah,
+      name: widget.surahName,
+    );
+    if (!mounted) return;
+    setState(() => _bookmarked = now);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: _bookmarked ? 'Remove bookmark' : 'Bookmark this ayah',
+      icon: Icon(
+        _bookmarked
+            ? Icons.bookmark_rounded
+            : Icons.bookmark_border_rounded,
+        color: AppColors.gold,
+      ),
+      onPressed: _toggle,
     );
   }
 }

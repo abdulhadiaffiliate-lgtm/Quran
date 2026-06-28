@@ -3,6 +3,7 @@ import '../models/quran.dart';
 import '../services/quran_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../services/quran_progress_service.dart';
 import 'surah_reader_screen.dart';
 
 class QuranScreen extends StatefulWidget {
@@ -38,7 +39,16 @@ class _QuranScreenState extends State<QuranScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quran')),
+      appBar: AppBar(
+        title: const Text('Quran'),
+        actions: [
+          IconButton(
+            tooltip: 'Bookmarks',
+            icon: const Icon(Icons.bookmarks_rounded),
+            onPressed: _showBookmarks,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: _error != null
             ? _buildError()
@@ -73,6 +83,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
     return Column(
       children: [
+        _ContinueReadingBanner(onOpen: _openSurahByNumber),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: TextField(
@@ -125,6 +136,56 @@ class _QuranScreenState extends State<QuranScreen> {
     );
   }
 
+  void _openSurahByNumber(int number) {
+    final surah = _surahs?.firstWhere(
+      (s) => s.number == number,
+      orElse: () => _surahs!.first,
+    );
+    if (surah == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SurahReaderScreen(surahMeta: surah),
+      ),
+    );
+  }
+
+  Future<void> _showBookmarks() async {
+    final bookmarks = await QuranProgressService.getBookmarks();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        if (bookmarks.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(40),
+            child: Center(
+              child: Text('No bookmarks yet. Tap the bookmark icon on any ayah.'),
+            ),
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          shrinkWrap: true,
+          children: [
+            Text('Bookmarks',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            ...bookmarks.map((b) => ListTile(
+                  leading: const Icon(Icons.bookmark_rounded,
+                      color: AppColors.gold),
+                  title: Text('${b.name}  ${b.surah}:${b.ayah}'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openSurahByNumber(b.surah);
+                  },
+                )),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _surahBadge(int number) {
     return Container(
       width: 40,
@@ -139,6 +200,80 @@ class _QuranScreenState extends State<QuranScreen> {
         style: const TextStyle(
           fontWeight: FontWeight.w700,
           color: AppColors.gold,
+        ),
+      ),
+    );
+  }
+}
+
+/// A banner shown at the top of the Quran list offering to resume the
+/// last-read surah. Hidden if there's no saved position.
+class _ContinueReadingBanner extends StatefulWidget {
+  final void Function(int surahNumber) onOpen;
+  const _ContinueReadingBanner({required this.onOpen});
+
+  @override
+  State<_ContinueReadingBanner> createState() =>
+      _ContinueReadingBannerState();
+}
+
+class _ContinueReadingBannerState extends State<_ContinueReadingBanner> {
+  ({int surah, String name, int ayah})? _last;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final last = await QuranProgressService.getLastRead();
+    if (!mounted) return;
+    setState(() => _last = last);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final last = _last;
+    if (last == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: GestureDetector(
+        onTap: () => widget.onOpen(last.surah),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.tealPrimary, AppColors.tealPrimaryLight],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.menu_book_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Continue reading',
+                        style: TextStyle(
+                            color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text(
+                      last.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+            ],
+          ),
         ),
       ),
     );

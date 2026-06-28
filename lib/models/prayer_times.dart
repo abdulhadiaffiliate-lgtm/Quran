@@ -9,6 +9,12 @@ class PrayerTimes {
   final DateTime isha;
   final String hijriDate;
   final String gregorianDate;
+  // Structured Hijri fields, used to apply a manual ±1 day offset without
+  // another network call.
+  final int? hijriDay;
+  final String? hijriMonthName;
+  final int? hijriMonthNumber;
+  final int? hijriYear;
 
   PrayerTimes({
     required this.fajr,
@@ -19,6 +25,10 @@ class PrayerTimes {
     required this.isha,
     required this.hijriDate,
     required this.gregorianDate,
+    this.hijriDay,
+    this.hijriMonthName,
+    this.hijriMonthNumber,
+    this.hijriYear,
   });
 
   factory PrayerTimes.fromJson(Map<String, dynamic> json) {
@@ -40,6 +50,11 @@ class PrayerTimes {
       );
     }
 
+    final hijriDay = int.tryParse(hijri['day'].toString());
+    final hijriMonthName = hijri['month']['en'] as String?;
+    final hijriMonthNumber = int.tryParse(hijri['month']['number'].toString());
+    final hijriYear = int.tryParse(hijri['year'].toString());
+
     return PrayerTimes(
       fajr: parseTime(timings['Fajr']),
       sunrise: parseTime(timings['Sunrise']),
@@ -47,13 +62,58 @@ class PrayerTimes {
       asr: parseTime(timings['Asr']),
       maghrib: parseTime(timings['Maghrib']),
       isha: parseTime(timings['Isha']),
-      hijriDate:
-          '${hijri['day']} ${hijri['month']['en']} ${hijri['year']}',
+      hijriDate: '${hijri['day']} ${hijri['month']['en']} ${hijri['year']}',
       gregorianDate: date['gregorian']['date'] as String,
+      hijriDay: hijriDay,
+      hijriMonthName: hijriMonthName,
+      hijriMonthNumber: hijriMonthNumber,
+      hijriYear: hijriYear,
     );
   }
 
-  /// Returns the list of (name, time) pairs in chronological order.
+  /// Returns a Hijri date string adjusted by [offsetDays] (-1, 0, or +1),
+  /// to account for local moon-sighting differing from the astronomical
+  /// calculation. Falls back to the unadjusted [hijriDate] if structured
+  /// fields aren't available or offset is 0.
+  String hijriDateWithOffset(int offsetDays) {
+    if (offsetDays == 0 ||
+        hijriDay == null ||
+        hijriMonthNumber == null ||
+        hijriYear == null) {
+      return hijriDate;
+    }
+
+    const hijriMonthNames = [
+      'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+      'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Shaban',
+      'Ramadan', 'Shawwal', 'Dhu al-Qadah', 'Dhu al-Hijjah',
+    ];
+    // Approximate Hijri month lengths (alternating 30/29; not exact for
+    // every year, but good enough for a ±1 day manual nudge).
+    const monthLengths = [30, 29, 30, 29, 30, 29, 30, 29, 30, 29, 30, 29];
+
+    int day = hijriDay! + offsetDays;
+    int monthIndex = hijriMonthNumber! - 1; // 0-based
+    int year = hijriYear!;
+
+    if (day < 1) {
+      monthIndex -= 1;
+      if (monthIndex < 0) {
+        monthIndex = 11;
+        year -= 1;
+      }
+      day = monthLengths[monthIndex];
+    } else if (day > monthLengths[monthIndex]) {
+      day = 1;
+      monthIndex += 1;
+      if (monthIndex > 11) {
+        monthIndex = 0;
+        year += 1;
+      }
+    }
+
+    return '$day ${hijriMonthNames[monthIndex]} $year';
+  }
   List<MapEntry<String, DateTime>> get ordered => [
         MapEntry('Fajr', fajr),
         MapEntry('Sunrise', sunrise),

@@ -7,6 +7,7 @@ import '../services/streak_service.dart';
 import '../services/app_settings.dart';
 import '../services/calc_method_resolver.dart';
 import '../services/notification_service.dart';
+import 'hijri_calendar_screen.dart';
 import '../theme/app_colors.dart';
 import '../utils/good_deeds.dart';
 import '../widgets/countdown_arc.dart';
@@ -25,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   Timer? _ticker;
   int _streak = 0;
+  int _hijriOffset = 0;
 
   @override
   void initState() {
@@ -53,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _loading = true;
       _error = null;
     });
+    final offset = await AppSettings.getHijriOffset();
+    if (mounted) setState(() => _hijriOffset = offset);
     try {
       double lat, lng;
       try {
@@ -172,12 +176,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  times.hijriDate,
-                  style: TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HijriCalendarScreen(times: times),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        times.hijriDateWithOffset(_hijriOffset),
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 14,
+                        color: AppColors.gold.withValues(alpha: 0.7),
+                      ),
+                    ],
                   ),
                 ),
               ],

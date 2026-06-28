@@ -66,4 +66,18 @@ class AppSettings {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_calcAutoDetectedKey, value);
   }
+
+  static const _hijriOffsetKey = 'hijri_date_offset';
+
+  /// Manual adjustment to the Hijri date in days (-1, 0, or +1), since
+  /// astronomical calculation can differ from local moon-sighting by a day.
+  static Future<int> getHijriOffset() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_hijriOffsetKey) ?? 0;
+  }
+
+  static Future<void> setHijriOffset(int offset) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_hijriOffsetKey, offset);
+  }
 }
