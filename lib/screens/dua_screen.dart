@@ -36,7 +36,7 @@ class DuaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dua & Azkar')),
+      appBar: AppBar(title: const Text('Dua')),
       body: SafeArea(
         child: ListView.builder(
           padding: const EdgeInsets.all(16),

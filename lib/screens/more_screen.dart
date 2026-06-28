@@ -23,7 +23,7 @@ class MoreScreen extends StatelessWidget {
             _tile(
               context,
               icon: Icons.auto_stories_rounded,
-              title: 'Dua & Azkar',
+              title: 'Dua',
               subtitle: 'Daily supplications & remembrance',
               onTap: () => Navigator.push(
                 context,

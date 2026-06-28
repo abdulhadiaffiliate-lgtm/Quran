@@ -32,6 +32,19 @@ class CountdownArc extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
+                    'Time remaining',
+                    style: TextStyle(
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withValues(alpha: 0.7),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  Text(
                     remainingLabel,
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyLarge?.color,

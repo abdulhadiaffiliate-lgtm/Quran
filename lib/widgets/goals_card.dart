@@ -216,6 +216,7 @@ class _GoalsCardState extends State<GoalsCard> {
     required String actionLabel,
   }) {
     final pct = target > 0 ? (progress / target).clamp(0.0, 1.0) : 0.0;
+    final isDone = target > 0 && progress >= target;
     return Row(
       children: [
         Icon(icon, size: 20, color: AppColors.gold),
@@ -240,21 +241,46 @@ class _GoalsCardState extends State<GoalsCard> {
                   value: pct,
                   minHeight: 6,
                   backgroundColor: AppColors.tealPrimary.withValues(alpha: 0.2),
-                  valueColor:
-                      const AlwaysStoppedAnimation(AppColors.gold),
+                  valueColor: AlwaysStoppedAnimation(
+                      isDone ? AppColors.success : AppColors.gold),
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(width: 10),
-        TextButton(
-          onPressed: onTap,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          ),
-          child: Text(actionLabel, style: const TextStyle(fontSize: 12)),
-        ),
+        isDone
+            ? Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_rounded,
+                        size: 14, color: AppColors.success),
+                    SizedBox(width: 4),
+                    Text('Done',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.success,
+                        )),
+                  ],
+                ),
+              )
+            : TextButton(
+                onPressed: onTap,
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+                child:
+                    Text(actionLabel, style: const TextStyle(fontSize: 12)),
+              ),
       ],
     );
   }

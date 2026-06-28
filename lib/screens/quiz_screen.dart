@@ -143,12 +143,13 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
   int? _selected;
   bool _answered = false;
   bool _finished = false;
+  bool _urdu = false;
 
   @override
   void initState() {
     super.initState();
-    // Shuffle a copy so order varies each attempt.
-    _questions = List.of(QuizData.forLevel(widget.level))..shuffle(Random());
+    // Same order for everyone today; refreshes automatically tomorrow.
+    _questions = QuizData.forLevelToday(widget.level, DateTime.now());
   }
 
   void _selectOption(int index) {
@@ -187,6 +188,19 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${_levelName()} Quiz'),
+        actions: [
+          if (!_finished)
+            TextButton(
+              onPressed: () => setState(() => _urdu = !_urdu),
+              child: Text(
+                _urdu ? 'اردو' : 'EN',
+                style: const TextStyle(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
       ),
       body: SafeArea(
         child: _finished ? _buildResult() : _buildQuestion(),
@@ -237,7 +251,9 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          q.question,
+          _urdu ? q.questionUr : q.question,
+          textAlign: _urdu ? TextAlign.right : TextAlign.left,
+          textDirection: _urdu ? TextDirection.rtl : TextDirection.ltr,
           style: Theme.of(context)
               .textTheme
               .titleLarge
@@ -280,7 +296,10 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(q.explanation,
+                Text(_urdu ? q.explanationUr : q.explanation,
+                    textAlign: _urdu ? TextAlign.right : TextAlign.left,
+                    textDirection:
+                        _urdu ? TextDirection.rtl : TextDirection.ltr,
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
@@ -354,8 +373,12 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(q.options[i],
-                  style: const TextStyle(fontSize: 15, height: 1.3)),
+              child: Text(
+                _urdu ? q.optionsUr[i] : q.options[i],
+                textAlign: _urdu ? TextAlign.right : TextAlign.left,
+                textDirection: _urdu ? TextDirection.rtl : TextDirection.ltr,
+                style: const TextStyle(fontSize: 15, height: 1.3),
+              ),
             ),
             if (_answered && i == q.correctIndex)
               const Icon(Icons.check_rounded, color: AppColors.success),

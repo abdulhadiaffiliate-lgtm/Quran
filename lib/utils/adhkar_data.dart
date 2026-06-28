@@ -5,6 +5,7 @@ class Adhkar {
   final String translation;
   final int repeat;
   final String? note;
+  final String? fullArabic;
 
   const Adhkar({
     required this.arabic,
@@ -12,6 +13,7 @@ class Adhkar {
     required this.translation,
     required this.repeat,
     this.note,
+    this.fullArabic,
   });
 }
 
@@ -19,6 +21,16 @@ class Adhkar {
 /// reported selection. Counts reflect the commonly transmitted repetitions.
 class AdhkarData {
   AdhkarData._();
+
+  // Full Quranic text for the long-press expansion, taken from the app's
+  // own verified bundled Quran data (assets/quran/ar/2.json, 112-114.json).
+  static const String _ayatulKursiFull =
+      'ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ مَن ذَا ٱلَّذِي يَشۡفَعُ عِندَهُۥٓ إِلَّا بِإِذۡنِهِۦۚ يَعۡلَمُ مَا بَيۡنَ أَيۡدِيهِمۡ وَمَا خَلۡفَهُمۡۖ وَلَا يُحِيطُونَ بِشَيۡءٖ مِّنۡ عِلۡمِهِۦٓ إِلَّا بِمَا شَآءَۚ وَسِعَ كُرۡسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۖ وَلَا يَـُٔودُهُۥ حِفۡظُهُمَاۚ وَهُوَ ٱلۡعَلِيُّ ٱلۡعَظِيمُ';
+
+  static const String _threeQulsFull =
+      'قُلۡ هُوَ ٱللَّهُ أَحَدٌ\nٱللَّهُ ٱلصَّمَدُ\nلَمۡ يَلِدۡ وَلَمۡ يُولَدۡ\nوَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ\n\n'
+      'قُلۡ أَعُوذُ بِرَبِّ ٱلۡفَلَقِ\nمِن شَرِّ مَا خَلَقَ\nوَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ\nوَمِن شَرِّ ٱلنَّفَّـٰثَٰتِ فِي ٱلۡعُقَدِ\nوَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ\n\n'
+      'قُلۡ أَعُوذُ بِرَبِّ ٱلنَّاسِ\nمَلِكِ ٱلنَّاسِ\nإِلَٰهِ ٱلنَّاسِ\nمِن شَرِّ ٱلۡوَسۡوَاسِ ٱلۡخَنَّاسِ\nٱلَّذِي يُوَسۡوِسُ فِي صُدُورِ ٱلنَّاسِ\nمِنَ ٱلۡجِنَّةِ وَٱلنَّاسِ';
 
   static const List<Adhkar> morning = [
     Adhkar(
@@ -30,6 +42,7 @@ class AdhkarData {
           'Ayat al-Kursi (2:255). Whoever recites it in the morning is protected until evening.',
       repeat: 1,
       note: 'Ayat al-Kursi',
+      fullArabic: _ayatulKursiFull,
     ),
     Adhkar(
       arabic:
@@ -39,6 +52,7 @@ class AdhkarData {
           'Recite Surah Al-Ikhlas, Al-Falaq, and An-Nas three times each — a protection for the day.',
       repeat: 3,
       note: 'The three Quls',
+      fullArabic: _threeQulsFull,
     ),
     Adhkar(
       arabic:
@@ -87,6 +101,7 @@ class AdhkarData {
           'Ayat al-Kursi (2:255). Whoever recites it in the evening is protected until morning.',
       repeat: 1,
       note: 'Ayat al-Kursi',
+      fullArabic: _ayatulKursiFull,
     ),
     Adhkar(
       arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ ... (الإخلاص، الفلق، الناس)',
@@ -95,6 +110,7 @@ class AdhkarData {
           'Recite Surah Al-Ikhlas, Al-Falaq, and An-Nas three times each — a protection for the night.',
       repeat: 3,
       note: 'The three Quls',
+      fullArabic: _threeQulsFull,
     ),
     Adhkar(
       arabic:

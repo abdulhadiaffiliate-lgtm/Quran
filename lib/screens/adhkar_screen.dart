@@ -93,6 +93,9 @@ class _AdhkarListState extends State<_AdhkarList>
               if (_progress[i] < item.repeat) _progress[i]++;
             });
           },
+          onLongPress: item.fullArabic != null
+              ? () => _showFullTextCard(context, item)
+              : null,
           child: Container(
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(18),
@@ -182,7 +185,9 @@ class _AdhkarListState extends State<_AdhkarList>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tap the card to count',
+                  item.fullArabic != null
+                      ? 'Tap to count · hold to read in full'
+                      : 'Tap the card to count',
                   style: TextStyle(
                     fontSize: 11,
                     color: Theme.of(context).textTheme.bodySmall?.color,
@@ -191,6 +196,62 @@ class _AdhkarListState extends State<_AdhkarList>
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showFullTextCard(BuildContext context, Adhkar item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (ctx, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    item.note ?? '',
+                    style: const TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    item.fullArabic ?? '',
+                    textAlign: TextAlign.right,
+                    textDirection: TextDirection.rtl,
+                    style: AppTheme.arabicStyle(
+                      color: Theme.of(context).textTheme.bodyLarge!.color!,
+                      fontSize: 22,
+                      height: 2.0,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
         );
       },
     );
