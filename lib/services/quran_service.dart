@@ -13,7 +13,8 @@ class QuranService {
     'Urdu': 'ur.jalandhry',
   };
 
-  /// Default reciter edition (Mishary Rashid Alafasy).
+  /// Default reciter edition (Mishary Rashid Alafasy). Used as a fallback;
+  /// the actual reciter is chosen via ReciterService.
   static const String audioEdition = 'ar.alafasy';
 
   /// Fetches the list of all 114 surahs with metadata (no ayah text yet).
@@ -29,18 +30,21 @@ class QuranService {
   }
 
   /// Fetches a single surah's Arabic text, a translation in the chosen
-  /// language, and per-ayah audio URLs from the default reciter.
+  /// language, and per-ayah audio URLs from the given reciter (falls back
+  /// to the default reciter if not specified).
   static Future<Surah> getSurah(
     int number, {
     String language = 'English',
+    String? reciterId,
   }) async {
     final translationEdition =
         translationEditions[language] ?? 'en.sahih';
+    final edition = reciterId ?? audioEdition;
 
     final arabicUri = Uri.parse('$_baseUrl/surah/$number/quran-uthmani');
     final translationUri =
         Uri.parse('$_baseUrl/surah/$number/$translationEdition');
-    final audioUri = Uri.parse('$_baseUrl/surah/$number/$audioEdition');
+    final audioUri = Uri.parse('$_baseUrl/surah/$number/$edition');
 
     final results = await Future.wait([
       http.get(arabicUri),

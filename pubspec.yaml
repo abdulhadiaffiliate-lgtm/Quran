@@ -28,6 +28,10 @@ dependencies:
   # Notifications for prayer alerts and daily reminders
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
+  # Share verse images and save to device gallery
+  share_plus: ^10.0.2
+  gal: ^2.3.0
+  path_provider: ^2.1.4
 
   # Audio playback for adhan
   audioplayers: ^6.0.0

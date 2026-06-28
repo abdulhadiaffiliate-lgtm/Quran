@@ -4,9 +4,11 @@ import '../models/quran.dart';
 import '../services/quran_service.dart';
 import '../services/app_settings.dart';
 import '../services/quran_progress_service.dart';
+import '../services/reciter_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'learn_ayah_screen.dart';
+import 'share_verse_screen.dart';
 
 class SurahReaderScreen extends StatefulWidget {
   final Surah surahMeta;
@@ -25,7 +27,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   final AudioPlayer _player = AudioPlayer();
   int? _playingAyah; // numberInSurah currently playing
   bool _playingAll = false;
-  int _playAllIndex = 0;
+  String _reciterId = 'ar.alafasy';
 
   // The standard Bismillah text as it appears prefixed on first ayahs.
   static const _bismillah = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
@@ -39,6 +41,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   Future<void> _init() async {
     _language = await AppSettings.getTranslationLanguage();
+    _reciterId = await ReciterService.getSelectedId();
     _load();
   }
 
@@ -49,7 +52,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     });
     try {
       final full = await QuranService.getSurah(widget.surahMeta.number,
-          language: _language);
+          language: _language, reciterId: _reciterId);
       if (!mounted) return;
       setState(() => _full = full);
       QuranProgressService.saveLastRead(
@@ -60,6 +63,48 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _pickReciter() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text('Choose reciter',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              ...ReciterService.all.map((r) {
+                final isSelected = r.id == _reciterId;
+                return ListTile(
+                  leading: Icon(
+                    isSelected
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_off_rounded,
+                    color: AppColors.gold,
+                  ),
+                  title: Text(r.name),
+                  onTap: () => Navigator.pop(ctx, r.id),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected != null && selected != _reciterId) {
+      await ReciterService.setSelectedId(selected);
+      setState(() => _reciterId = selected);
+      await _player.stop();
+      setState(() {
+        _playingAll = false;
+        _playingAyah = null;
+      });
+      _load(); // Reload to fetch per-ayah audio from the new reciter.
     }
   }
 
@@ -134,21 +179,23 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   Future<void> _playAyah(Ayah ayah) async {
     if (ayah.audioUrl == null) return;
-    _playingAll = false;
     if (_playingAyah == ayah.numberInSurah) {
       await _player.stop();
-      setState(() => _playingAyah = null);
+      setState(() {
+        _playingAyah = null;
+        _playingAll = false;
+      });
     } else {
       await _player.stop();
       await _player.play(UrlSource(ayah.audioUrl!));
-      setState(() => _playingAyah = ayah.numberInSurah);
+      setState(() {
+        _playingAyah = ayah.numberInSurah;
+        _playingAll = false;
+      });
     }
   }
 
   Future<void> _playWholeSurah() async {
-    final ayahs = _full?.ayahs;
-    if (ayahs == null || ayahs.isEmpty) return;
-
     if (_playingAll) {
       // Stop play-all.
       await _player.stop();
@@ -159,42 +206,25 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
       return;
     }
 
+    await _player.stop();
+    // Use a single continuous full-surah audio file (no per-ayah gaps),
+    // instead of chaining individual ayah clips, which used to cause
+    // audible stutter between verses.
+    final url = ReciterService.fullSurahUrl(
+        _reciterId, widget.surahMeta.number);
     setState(() {
       _playingAll = true;
-      _playAllIndex = 0;
+      _playingAyah = null; // Whole-surah playback isn't tied to one ayah.
     });
-    await _playAt(0);
-  }
-
-  Future<void> _playAt(int index) async {
-    final ayahs = _full!.ayahs;
-    if (index >= ayahs.length) {
-      setState(() {
-        _playingAll = false;
-        _playingAyah = null;
-      });
-      return;
-    }
-    final ayah = ayahs[index];
-    if (ayah.audioUrl == null) {
-      _onTrackComplete();
-      return;
-    }
-    await _player.play(UrlSource(ayah.audioUrl!));
-    setState(() {
-      _playAllIndex = index;
-      _playingAyah = ayah.numberInSurah;
-    });
+    await _player.play(UrlSource(url));
   }
 
   void _onTrackComplete() {
     if (!mounted) return;
-    if (_playingAll) {
-      final next = _playAllIndex + 1;
-      _playAt(next);
-    } else {
-      setState(() => _playingAyah = null);
-    }
+    setState(() {
+      _playingAll = false;
+      _playingAyah = null;
+    });
   }
 
   @override
@@ -226,6 +256,11 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 : Icons.translate_outlined),
             onPressed: () =>
                 setState(() => _showTranslation = !_showTranslation),
+          ),
+          IconButton(
+            tooltip: 'Choose reciter',
+            icon: const Icon(Icons.record_voice_over_rounded),
+            onPressed: _pickReciter,
           ),
         ],
       ),
@@ -369,6 +404,22 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ),
               ),
               const Spacer(),
+              IconButton(
+                tooltip: 'Share this verse',
+                icon: const Icon(Icons.ios_share_rounded,
+                    color: AppColors.gold, size: 20),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShareVerseScreen(
+                      arabicText: arabic,
+                      translationText: ayah.translationText ?? '',
+                      reference:
+                          '${widget.surahMeta.nameEnglish} $surahNumber:${ayah.numberInSurah}',
+                    ),
+                  ),
+                ),
+              ),
               _BookmarkButton(
                 surah: surahNumber,
                 ayah: ayah.numberInSurah,
