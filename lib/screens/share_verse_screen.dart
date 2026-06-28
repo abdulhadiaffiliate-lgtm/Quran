@@ -56,11 +56,9 @@ class _ShareVerseScreenState extends State<ShareVerseScreen> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/salahsync_verse.png');
       await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'Shared from SalahSync',
-        ),
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Shared from SalahSync',
       );
     } catch (e) {
       if (mounted) {
