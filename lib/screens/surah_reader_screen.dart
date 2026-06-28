@@ -55,15 +55,27 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
       _full = null;
     });
     try {
-      final full = await QuranService.getSurah(widget.surahMeta.number,
-          language: _language, reciterId: _reciterId);
+      // Text loads instantly from bundled offline assets — no network
+      // wait at all, so the surah displays immediately even with no
+      // internet connection.
+      final textOnly = await QuranService.getSurahText(
+          widget.surahMeta.number,
+          language: _language);
       if (!mounted) return;
-      setState(() => _full = full);
+      setState(() => _full = textOnly);
       QuranProgressService.saveLastRead(
         surahNumber: widget.surahMeta.number,
         surahName: widget.surahMeta.nameEnglish,
         ayahNumber: 1,
       );
+
+      // Audio is attached afterward, in the background. If there's no
+      // internet this simply fails quietly and play buttons stay hidden
+      // for ayahs without an audio URL — the text remains fully readable.
+      QuranService.attachAudio(textOnly, reciterId: _reciterId).then((withAudio) {
+        if (!mounted || withAudio == null) return;
+        setState(() => _full = withAudio);
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
@@ -199,6 +211,8 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     }
   }
 
+  bool _bufferingFullSurah = false;
+
   Future<void> _playWholeSurah() async {
     if (_playingAll) {
       // Stop play-all.
@@ -207,43 +221,67 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
       setState(() {
         _playingAll = false;
         _playingAyah = null;
+        _bufferingFullSurah = false;
       });
       return;
     }
 
     await _player.stop();
+    setState(() => _bufferingFullSurah = true);
+
     // Use a single continuous full-surah audio file (no per-ayah gaps),
     // instead of chaining individual ayah clips, which used to cause
     // audible stutter between verses.
     final url = ReciterService.fullSurahUrl(
         _reciterId, widget.surahMeta.number);
 
-    // Load per-ayah start times for this reciter, if we have timing data
-    // for them, so we can highlight the verse currently being recited.
-    _ayahStartTimes = await AyahTimingService.getAyahStartTimes(
+    // Start buffering/playback and loading the timing data (if this
+    // reciter has any) at the same time, instead of one after another,
+    // so starting playback isn't delayed waiting on the timing asset.
+    final timingFuture = AyahTimingService.getAyahStartTimes(
       reciterId: _reciterId,
       surahNumber: widget.surahMeta.number,
       ayahCount: _full?.ayahs.length ?? widget.surahMeta.ayahCount,
     );
+
+    _positionSub?.cancel();
+    // Show the highlight as soon as we actually start receiving position
+    // updates (i.e. playback has truly begun, not just requested).
+    bool started = false;
+    _positionSub = _player.onPositionChanged.listen((pos) {
+      if (!mounted || !_playingAll) return;
+      if (!started) {
+        started = true;
+        setState(() => _bufferingFullSurah = false);
+      }
+      if (_ayahStartTimes.isNotEmpty) {
+        final index = AyahTimingService.ayahIndexForPosition(
+            _ayahStartTimes, pos.inMilliseconds);
+        if (index != null && index != _playingAyah) {
+          setState(() => _playingAyah = index);
+        }
+      }
+    });
 
     setState(() {
       _playingAll = true;
       _playingAyah = null;
     });
 
-    _positionSub?.cancel();
-    if (_ayahStartTimes.isNotEmpty) {
-      _positionSub = _player.onPositionChanged.listen((pos) {
-        if (!mounted || !_playingAll) return;
-        final index = AyahTimingService.ayahIndexForPosition(
-            _ayahStartTimes, pos.inMilliseconds);
-        if (index != null && index != _playingAyah) {
-          setState(() => _playingAyah = index);
-        }
-      });
-    }
+    // Kick off playback right away; don't wait on the timing fetch.
+    final playFuture = _player.play(UrlSource(url));
 
-    await _player.play(UrlSource(url));
+    _ayahStartTimes = await timingFuture;
+    await playFuture;
+
+    // Safety: if no position event arrives within a few seconds (e.g.
+    // very slow connection), stop showing the buffering spinner anyway
+    // so the UI doesn't look stuck forever.
+    Future.delayed(const Duration(seconds: 8), () {
+      if (mounted && _bufferingFullSurah) {
+        setState(() => _bufferingFullSurah = false);
+      }
+    });
   }
 
   void _onTrackComplete() {
@@ -252,6 +290,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     setState(() {
       _playingAll = false;
       _playingAyah = null;
+      _bufferingFullSurah = false;
     });
   }
 
@@ -377,11 +416,22 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.darkBg,
             ),
-            onPressed: _playWholeSurah,
-            icon: Icon(_playingAll
-                ? Icons.stop_rounded
-                : Icons.play_arrow_rounded),
-            label: Text(_playingAll ? 'Stop' : 'Play whole surah'),
+            onPressed: _bufferingFullSurah ? null : _playWholeSurah,
+            icon: _bufferingFullSurah
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.darkBg,
+                    ),
+                  )
+                : Icon(_playingAll
+                    ? Icons.stop_rounded
+                    : Icons.play_arrow_rounded),
+            label: Text(_bufferingFullSurah
+                ? 'Loading…'
+                : (_playingAll ? 'Stop' : 'Play whole surah')),
           ),
         ],
       ),

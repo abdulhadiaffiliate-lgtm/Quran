@@ -14,6 +14,19 @@
 class CalcMethodResolver {
   CalcMethodResolver._();
 
+  /// Human-readable names for the calculation methods this app supports
+  /// choosing from, for display in Settings.
+  static const Map<int, String> methodNames = {
+    3: 'Muslim World League',
+    2: 'ISNA (North America)',
+    4: 'Umm al-Qura (Makkah)',
+    1: 'University of Karachi',
+    5: 'Egyptian General Authority',
+    8: 'Gulf Region',
+    13: 'Diyanet (Turkey)',
+    12: 'UOIF (France)',
+  };
+
   /// Returns a method id for the given coordinates. Never throws; falls
   /// back to Muslim World League (3) for anywhere not specifically mapped.
   static int resolveFromCoordinates(double lat, double lng) {

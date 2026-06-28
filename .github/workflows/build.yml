@@ -214,11 +214,128 @@ jobs:
             echo "No adhan.mp3 found in assets/audio/ — Azan style will fall back to default sound."
           fi
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No KEYSTORE_BASE64 secret set — will fall back to debug signing."
+            echo "HAS_KEYSTORE=false" >> $GITHUB_ENV
+          else
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
+            echo "Keystore decoded."
+          fi
+
+      - name: Configure release signing
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.keystore
+          EOF
+
+          python3 - <<'PY'
+          import os
+
+          kts = "android/app/build.gradle.kts"
+          groovy = "android/app/build.gradle"
+          path = kts if os.path.exists(kts) else groovy
+          with open(path) as f:
+              content = f.read()
+
+          if path == kts:
+              # Load key.properties and define a signing config in Kotlin DSL.
+              load_block = '''
+          import java.util.Properties
+          import java.io.FileInputStream
+
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          val keystoreProperties = Properties()
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+          }
+          '''
+              content = load_block + content
+
+              sign_config = '''
+              signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String?
+                      keyPassword = keystoreProperties["keyPassword"] as String?
+                      storeFile = keystoreProperties["storeFile"]?.let { rootProject.file(it) }
+                      storePassword = keystoreProperties["storePassword"] as String?
+                  }
+              }
+          '''
+              content = content.replace(
+                  "buildTypes {",
+                  sign_config + "    buildTypes {",
+                  1,
+              )
+              content = content.replace(
+                  'signingConfig = signingConfigs.getByName("debug")',
+                  'signingConfig = signingConfigs.getByName("release")',
+                  1,
+              )
+              with open(path, "w") as f:
+                  f.write(content)
+              print("Release signing configured (Kotlin DSL).")
+          else:
+              load_block = '''
+          def keystorePropertiesFile = rootProject.file("key.properties")
+          def keystoreProperties = new Properties()
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+          '''
+              content = load_block + content
+
+              sign_config = '''
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile keystoreProperties['storeFile'] ? rootProject.file(keystoreProperties['storeFile']) : null
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+          '''
+              content = content.replace(
+                  "buildTypes {",
+                  sign_config + "    buildTypes {",
+                  1,
+              )
+              content = content.replace(
+                  "signingConfig signingConfigs.debug",
+                  "signingConfig signingConfigs.release",
+                  1,
+              )
+              with open(path, "w") as f:
+                  f.write(content)
+              print("Release signing configured (Groovy DSL).")
+          PY
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Build release AAB (for Play Store upload)
+        run: flutter build appbundle --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SalahSync-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: SalahSync-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: SalahSync-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
