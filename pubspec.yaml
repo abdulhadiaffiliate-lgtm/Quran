@@ -60,6 +60,13 @@ flutter:
     - assets/data/
     - assets/audio/
     - assets/wbw/
+    - assets/quran/ar/
+    - assets/quran/en/
+    - assets/quran/ur/
+    - assets/timings/husary/
+    - assets/timings/minshawy/
+    - assets/timings/shuraym/
+    - assets/timings/basit/
 
 flutter_launcher_icons:
   android: true

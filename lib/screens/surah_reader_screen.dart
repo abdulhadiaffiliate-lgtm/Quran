@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import '../models/quran.dart';
 import '../services/quran_service.dart';
 import '../services/app_settings.dart';
 import '../services/quran_progress_service.dart';
 import '../services/reciter_service.dart';
+import '../services/ayah_timing_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'learn_ayah_screen.dart';
@@ -28,6 +30,8 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   int? _playingAyah; // numberInSurah currently playing
   bool _playingAll = false;
   String _reciterId = 'ar.alafasy';
+  List<int> _ayahStartTimes = []; // ms, only populated when supported
+  StreamSubscription<Duration>? _positionSub;
 
   // The standard Bismillah text as it appears prefixed on first ayahs.
   static const _bismillah = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
@@ -199,6 +203,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     if (_playingAll) {
       // Stop play-all.
       await _player.stop();
+      _positionSub?.cancel();
       setState(() {
         _playingAll = false;
         _playingAyah = null;
@@ -212,15 +217,38 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     // audible stutter between verses.
     final url = ReciterService.fullSurahUrl(
         _reciterId, widget.surahMeta.number);
+
+    // Load per-ayah start times for this reciter, if we have timing data
+    // for them, so we can highlight the verse currently being recited.
+    _ayahStartTimes = await AyahTimingService.getAyahStartTimes(
+      reciterId: _reciterId,
+      surahNumber: widget.surahMeta.number,
+      ayahCount: _full?.ayahs.length ?? widget.surahMeta.ayahCount,
+    );
+
     setState(() {
       _playingAll = true;
-      _playingAyah = null; // Whole-surah playback isn't tied to one ayah.
+      _playingAyah = null;
     });
+
+    _positionSub?.cancel();
+    if (_ayahStartTimes.isNotEmpty) {
+      _positionSub = _player.onPositionChanged.listen((pos) {
+        if (!mounted || !_playingAll) return;
+        final index = AyahTimingService.ayahIndexForPosition(
+            _ayahStartTimes, pos.inMilliseconds);
+        if (index != null && index != _playingAyah) {
+          setState(() => _playingAyah = index);
+        }
+      });
+    }
+
     await _player.play(UrlSource(url));
   }
 
   void _onTrackComplete() {
     if (!mounted) return;
+    _positionSub?.cancel();
     setState(() {
       _playingAll = false;
       _playingAyah = null;
@@ -229,6 +257,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   @override
   void dispose() {
+    _positionSub?.cancel();
     _player.dispose();
     super.dispose();
   }
@@ -395,29 +424,15 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                '${widget.surahMeta.nameEnglish} $surahNumber:${ayah.numberInSurah}',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context).textTheme.bodySmall?.color,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Share this verse',
-                icon: const Icon(Icons.ios_share_rounded,
-                    color: AppColors.gold, size: 20),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ShareVerseScreen(
-                      arabicText: arabic,
-                      translationText: ayah.translationText ?? '',
-                      reference:
-                          '${widget.surahMeta.nameEnglish} $surahNumber:${ayah.numberInSurah}',
-                    ),
+              Expanded(
+                child: Text(
+                  '${widget.surahMeta.nameEnglish} $surahNumber:${ayah.numberInSurah}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                    fontWeight: FontWeight.w500,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               _BookmarkButton(
@@ -425,9 +440,9 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ayah: ayah.numberInSurah,
                 surahName: widget.surahMeta.nameEnglish,
               ),
-              IconButton(
+              _compactIconButton(
                 tooltip: 'Learn this ayah',
-                icon: const Icon(Icons.school_rounded, color: AppColors.gold),
+                icon: Icons.school_rounded,
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -441,13 +456,11 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                 ),
               ),
               if (ayah.audioUrl != null)
-                IconButton(
-                  icon: Icon(
-                    isPlaying
-                        ? Icons.pause_circle_filled_rounded
-                        : Icons.play_circle_outline_rounded,
-                    color: AppColors.gold,
-                  ),
+                _compactIconButton(
+                  tooltip: isPlaying ? 'Pause' : 'Play this verse',
+                  icon: isPlaying
+                      ? Icons.pause_circle_filled_rounded
+                      : Icons.play_circle_outline_rounded,
                   onPressed: () => _playAyah(ayah),
                 ),
             ],
@@ -480,8 +493,54 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
                   ?.copyWith(height: 1.6),
             ),
           ],
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ShareVerseScreen(
+                    arabicText: arabic,
+                    translationText: ayah.translationText ?? '',
+                    reference:
+                        '${widget.surahMeta.nameEnglish} $surahNumber:${ayah.numberInSurah}',
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.ios_share_rounded,
+                  size: 16, color: AppColors.gold),
+              label: const Text(
+                'Share',
+                style: TextStyle(color: AppColors.gold, fontSize: 13),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 32),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  /// A smaller, tighter icon button used in the ayah action row so four
+  /// of them (share, bookmark, learn, play) fit comfortably without
+  /// overflowing on narrower screens.
+  static Widget _compactIconButton({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon, color: AppColors.gold, size: 20),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
     );
   }
 }

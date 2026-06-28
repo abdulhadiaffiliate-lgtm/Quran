@@ -1,86 +1,112 @@
 import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import '../models/quran.dart';
 
-/// Wraps the Al Quran Cloud API (api.alquran.cloud) for Quran text,
-/// translations, and audio recitation. No API key required.
+/// Provides Quran text (Arabic + translations) from bundled offline
+/// assets, so reading the Quran works instantly with no internet and no
+/// lag. Audio recitation still streams from the Al Quran Cloud API/CDN,
+/// since thousands of audio files can't reasonably be bundled.
 class QuranService {
   static const _baseUrl = 'https://api.alquran.cloud/v1';
 
-  /// Available translation editions the UI can switch between.
+  /// Available translation languages the UI can switch between, mapped to
+  /// the bundled asset folder name.
   static const Map<String, String> translationEditions = {
-    'English': 'en.sahih',
-    'Urdu': 'ur.jalandhry',
+    'English': 'en',
+    'Urdu': 'ur',
   };
 
   /// Default reciter edition (Mishary Rashid Alafasy). Used as a fallback;
   /// the actual reciter is chosen via ReciterService.
   static const String audioEdition = 'ar.alafasy';
 
-  /// Fetches the list of all 114 surahs with metadata (no ayah text yet).
+  static List<Surah>? _cachedList;
+  static final Map<String, Surah> _cachedSurahs = {}; // key: "$number-$lang"
+
+  /// Loads the list of all 114 surahs with metadata, from a bundled
+  /// offline asset. Instant, no network needed.
   static Future<List<Surah>> getSurahList() async {
-    final uri = Uri.parse('$_baseUrl/surah');
-    final response = await http.get(uri);
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load surah list (${response.statusCode})');
-    }
-    final body = json.decode(response.body);
-    final List data = body['data'];
-    return data.map((s) => Surah.fromJson(s)).toList();
+    if (_cachedList != null) return _cachedList!;
+    final raw = await rootBundle.loadString('assets/quran/index.json');
+    final List data = json.decode(raw);
+    final list = data.map((s) => Surah.fromJson(s)).toList();
+    _cachedList = list;
+    return list;
   }
 
-  /// Fetches a single surah's Arabic text, a translation in the chosen
-  /// language, and per-ayah audio URLs from the given reciter (falls back
-  /// to the default reciter if not specified).
+  /// Loads a single surah's Arabic text and translation from bundled
+  /// offline assets (instant, no network), then fetches per-ayah audio
+  /// URLs from the given reciter over the network (audio still needs a
+  /// connection to stream).
   static Future<Surah> getSurah(
     int number, {
     String language = 'English',
     String? reciterId,
   }) async {
-    final translationEdition =
-        translationEditions[language] ?? 'en.sahih';
+    final cacheKey = '$number-$language';
+    Surah? base = _cachedSurahs[cacheKey];
+
+    if (base == null) {
+      final langFolder = translationEditions[language] ?? 'en';
+      final arabicRaw =
+          await rootBundle.loadString('assets/quran/ar/$number.json');
+      final translationRaw = await rootBundle
+          .loadString('assets/quran/$langFolder/$number.json');
+
+      final arabicData = json.decode(arabicRaw);
+      final translationData = json.decode(translationRaw);
+
+      final List arabicVerses = arabicData['verses'];
+      final List translationVerses = translationData['verses'];
+
+      final ayahs = <Ayah>[];
+      for (var i = 0; i < arabicVerses.length; i++) {
+        ayahs.add(Ayah(
+          numberInSurah: arabicVerses[i]['id'],
+          arabicText: arabicVerses[i]['text'],
+          translationText:
+              i < translationVerses.length ? translationVerses[i]['translation'] : null,
+        ));
+      }
+
+      base = Surah(
+        number: number,
+        nameArabic: arabicData['name'],
+        nameEnglish: arabicData['transliteration'],
+        nameTranslation: translationData['translation'] ?? '',
+        revelationType: arabicData['type'],
+        ayahCount: arabicData['total_verses'],
+        ayahs: ayahs,
+      );
+      _cachedSurahs[cacheKey] = base;
+    }
+
+    // Fetch audio URLs over the network (can fail gracefully — text still
+    // displays and plays buttons simply won't have audio).
     final edition = reciterId ?? audioEdition;
-
-    final arabicUri = Uri.parse('$_baseUrl/surah/$number/quran-uthmani');
-    final translationUri =
-        Uri.parse('$_baseUrl/surah/$number/$translationEdition');
-    final audioUri = Uri.parse('$_baseUrl/surah/$number/$edition');
-
-    final results = await Future.wait([
-      http.get(arabicUri),
-      http.get(translationUri),
-      http.get(audioUri),
-    ]);
-
-    if (results[0].statusCode != 200) {
-      throw Exception('Failed to load surah text (${results[0].statusCode})');
+    try {
+      final audioUri = Uri.parse('$_baseUrl/surah/$number/$edition');
+      final audioRes = await http.get(audioUri).timeout(
+            const Duration(seconds: 10),
+          );
+      if (audioRes.statusCode == 200) {
+        final List audioAyahs = json.decode(audioRes.body)['data']['ayahs'];
+        final ayahsWithAudio = <Ayah>[];
+        for (var i = 0; i < base.ayahs.length; i++) {
+          final a = base.ayahs[i];
+          ayahsWithAudio.add(Ayah(
+            numberInSurah: a.numberInSurah,
+            arabicText: a.arabicText,
+            translationText: a.translationText,
+            audioUrl: i < audioAyahs.length ? audioAyahs[i]['audio'] : null,
+          ));
+        }
+        return base.withAyahs(ayahsWithAudio);
+      }
+    } catch (_) {
+      // No internet or audio fetch failed — return text-only surah.
     }
-
-    final arabicBody = json.decode(results[0].body)['data'];
-    final base = Surah.fromJson(arabicBody);
-
-    List? translationAyahs;
-    if (results[1].statusCode == 200) {
-      translationAyahs = json.decode(results[1].body)['data']['ayahs'];
-    }
-
-    List? audioAyahs;
-    if (results[2].statusCode == 200) {
-      audioAyahs = json.decode(results[2].body)['data']['ayahs'];
-    }
-
-    final List arabicAyahs = arabicBody['ayahs'];
-    final ayahs = <Ayah>[];
-    for (var i = 0; i < arabicAyahs.length; i++) {
-      ayahs.add(Ayah(
-        numberInSurah: arabicAyahs[i]['numberInSurah'],
-        arabicText: arabicAyahs[i]['text'],
-        translationText:
-            translationAyahs != null ? translationAyahs[i]['text'] : null,
-        audioUrl: audioAyahs != null ? audioAyahs[i]['audio'] : null,
-      ));
-    }
-
-    return base.withAyahs(ayahs);
+    return base;
   }
 }
