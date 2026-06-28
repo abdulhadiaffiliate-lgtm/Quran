@@ -44,6 +44,12 @@ class ReciterService {
 
   /// Builds the URL for a single continuous full-surah audio file (no
   /// per-ayah gaps), served from the islamic.network CDN.
+  ///
+  /// Uses 128 kbps — the bitrate verified available for surah audio on
+  /// this CDN. Note: the player downloads the whole file before playback
+  /// begins (it doesn't stream progressively), so large surahs can take
+  /// time to start on a slow connection; the reader shows a buffering
+  /// indicator until audio actually begins.
   static String fullSurahUrl(String reciterId, int surahNumber,
       {int bitrate = 128}) {
     return 'https://cdn.islamic.network/quran/audio-surah/$bitrate/$reciterId/$surahNumber.mp3';

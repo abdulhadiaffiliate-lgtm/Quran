@@ -230,6 +230,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   Future<void> _playAyah(Ayah ayah) async {
     if (ayah.audioUrl == null) return;
+    _chainMode = false; // cancel any whole-surah streaming chain
     if (_playingAyah == ayah.numberInSurah) {
       await _player.stop();
       setState(() {
@@ -251,9 +252,14 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   bool _isDownloading = false;
   double? _downloadProgress;
 
+  // Index into the surah's ayahs while chain-playing for streaming.
+  int _chainIndex = 0;
+  bool _chainMode = false; // true when streaming verse-by-verse
+
   Future<void> _playWholeSurah() async {
     if (_playingAll) {
       // Stop play-all.
+      _chainMode = false;
       await _player.stop();
       _positionSub?.cancel();
       setState(() {
@@ -267,91 +273,102 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     await _player.stop();
 
     // Prefer an offline source (bundled short surah, or previously
-    // downloaded) over streaming — instant start, no network wait.
+    // downloaded) — a single continuous file that's already local, so it
+    // starts instantly.
     final offlinePath = await OfflineAudioService.getOfflineSource(
         widget.surahMeta.number, _reciterId);
-    final usingOffline = offlinePath != null;
 
-    // Only show the buffering spinner when we'll actually need to wait
-    // on a network stream; offline playback starts immediately.
-    if (!usingOffline) {
-      setState(() => _bufferingFullSurah = true);
-    }
-
-    // Start buffering/playback and loading the timing data (if this
-    // reciter has any) at the same time, instead of one after another,
-    // so starting playback isn't delayed waiting on the timing asset.
-    final timingFuture = AyahTimingService.getAyahStartTimes(
+    // Load timing data (for highlighting) regardless of playback method.
+    _ayahStartTimes = await AyahTimingService.getAyahStartTimes(
       reciterId: _reciterId,
       surahNumber: widget.surahMeta.number,
       ayahCount: _full?.ayahs.length ?? widget.surahMeta.ayahCount,
     );
-
-    _positionSub?.cancel();
-    // Show the highlight as soon as we actually start receiving position
-    // updates (i.e. playback has truly begun, not just requested).
-    bool started = false;
-    _positionSub = _player.onPositionChanged.listen((pos) {
-      if (!mounted || !_playingAll) return;
-      if (!started) {
-        started = true;
-        setState(() => _bufferingFullSurah = false);
-      }
-      if (_ayahStartTimes.isNotEmpty) {
-        final index = AyahTimingService.ayahIndexForPosition(
-            _ayahStartTimes, pos.inMilliseconds);
-        if (index != null && index != _playingAyah) {
-          setState(() => _playingAyah = index);
-        }
-      }
-    });
 
     setState(() {
       _playingAll = true;
       _playingAyah = null;
     });
 
-    // Kick off playback right away; don't wait on the timing fetch.
-    // Use the offline file if we have one, otherwise stream from the CDN.
-    final playFuture = usingOffline
-        ? _player.play(DeviceFileSource(offlinePath))
-        : _player.play(UrlSource(ReciterService.fullSurahUrl(
-            _reciterId, widget.surahMeta.number)));
+    if (offlinePath != null) {
+      // OFFLINE: one continuous local file, highlight via position timing.
+      _chainMode = false;
+      _positionSub?.cancel();
+      _positionSub = _player.onPositionChanged.listen((pos) {
+        if (!mounted || !_playingAll) return;
+        if (_ayahStartTimes.isNotEmpty) {
+          final index = AyahTimingService.ayahIndexForPosition(
+              _ayahStartTimes, pos.inMilliseconds);
+          if (index != null && index != _playingAyah) {
+            setState(() => _playingAyah = index);
+          }
+        }
+      });
+      await _player.play(DeviceFileSource(offlinePath));
+      return;
+    }
 
-    // Guard the play() call itself with a timeout — if it hangs (bad URL,
-    // unreachable host, stuck connection), don't let the UI sit on
-    // "Loading…" forever with no feedback.
-    playFuture.timeout(const Duration(seconds: 12)).catchError((error) {
-      if (!mounted) return;
-      if (_playingAll && _bufferingFullSurah) {
-        setState(() {
-          _playingAll = false;
-          _bufferingFullSurah = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+    // STREAMING: chain the small per-ayah audio files instead of waiting
+    // for one big continuous file to fully download. Each verse starts
+    // playing within a second, and we advance to the next on completion.
+    final ayahs = _full?.ayahs;
+    if (ayahs == null || ayahs.isEmpty || ayahs.first.audioUrl == null) {
+      // No per-ayah audio available (e.g. offline with no download) —
+      // can't stream. Let the user know rather than sit silent.
+      setState(() {
+        _playingAll = false;
+        _playingAyah = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
             content: Text(
-                'Could not play this surah. Check your connection and try again.'),
-          ),
-        );
-      }
-    });
+                'Audio needs an internet connection, or download this surah for offline use.')),
+      );
+      return;
+    }
 
-    _ayahStartTimes = await timingFuture;
+    _positionSub?.cancel();
+    _chainMode = true;
+    _chainIndex = 0;
+    _playChainAt(0);
+  }
 
-    // Independently of the play() call above, also clear the spinner if
-    // no position update has arrived after a few seconds — this runs
-    // concurrently (not after a blocking await), so it fires even if
-    // play() itself never resolves.
-    Future.delayed(const Duration(seconds: 8), () {
-      if (mounted && _bufferingFullSurah) {
-        setState(() => _bufferingFullSurah = false);
+  Future<void> _playChainAt(int index) async {
+    final ayahs = _full?.ayahs;
+    if (!_chainMode || ayahs == null || index >= ayahs.length) {
+      if (index >= (ayahs?.length ?? 0)) {
+        // Finished the whole surah.
+        _onTrackComplete();
       }
-    });
+      return;
+    }
+    final ayah = ayahs[index];
+    if (ayah.audioUrl == null) {
+      _playChainAt(index + 1);
+      return;
+    }
+    _chainIndex = index;
+    setState(() => _playingAyah = ayah.numberInSurah);
+    try {
+      await _player.play(UrlSource(ayah.audioUrl!));
+    } catch (_) {
+      if (mounted && _chainMode) _playChainAt(index + 1);
+    }
   }
 
   void _onTrackComplete() {
     if (!mounted) return;
+    // In chain (streaming) mode, completion of one ayah means advance to
+    // the next rather than stopping.
+    if (_chainMode) {
+      final next = _chainIndex + 1;
+      final ayahs = _full?.ayahs;
+      if (ayahs != null && next < ayahs.length) {
+        _playChainAt(next);
+        return;
+      }
+    }
+    _chainMode = false;
     _positionSub?.cancel();
     setState(() {
       _playingAll = false;
