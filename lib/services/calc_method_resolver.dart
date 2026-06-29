@@ -58,6 +58,15 @@ class CalcMethodResolver {
     return 3;
   }
 
+  /// True if the coordinates fall within South Asia (Pakistan, India,
+  /// Bangladesh, Afghanistan) — the same region used for the Karachi
+  /// calculation method above. Reused to auto-default the Hijri date
+  /// offset, since local moon-sighting in this region is reliably about
+  /// a day behind the global astronomical calculation.
+  static bool isSouthAsia(double lat, double lng) {
+    return _inBox(lat, lng, 5.0, 38.0, 60.0, 93.0);
+  }
+
   static bool _inBox(
     double lat,
     double lng,

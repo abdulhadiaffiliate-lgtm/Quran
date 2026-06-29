@@ -20,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _reciterId = 'ar.alafasy';
   int _calcMethod = 3;
   int _hijriOffset = 0;
+  String _asrSchool = 'hanafi';
   bool _loading = true;
 
   @override
@@ -33,12 +34,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final reciter = await ReciterService.getSelectedId();
     final method = await AppSettings.getCalcMethod();
     final offset = await AppSettings.getHijriOffset();
+    final asrSchool = await AppSettings.getAsrSchool();
     if (!mounted) return;
     setState(() {
       _translationLang = lang;
       _reciterId = reciter;
       _calcMethod = method;
       _hijriOffset = offset;
+      _asrSchool = asrSchool;
       _loading = false;
     });
   }
@@ -106,6 +109,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _pickAsrSchool() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Asr timing (juristic school)',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Hanafi calculates a later Asr time than Shafi\'i, Maliki, or Hanbali. Pakistan and South Asia generally follow Hanafi.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                _asrSchool == 'hanafi'
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: AppColors.gold,
+              ),
+              title: const Text('Hanafi'),
+              subtitle: const Text('Later Asr — common in South Asia'),
+              onTap: () => Navigator.pop(ctx, 'hanafi'),
+            ),
+            ListTile(
+              leading: Icon(
+                _asrSchool == 'shafii'
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: AppColors.gold,
+              ),
+              title: const Text('Shafi\'i / Maliki / Hanbali'),
+              subtitle: const Text('Earlier Asr'),
+              onTap: () => Navigator.pop(ctx, 'shafii'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) {
+      await AppSettings.setAsrSchool(selected);
+      setState(() => _asrSchool = selected);
+    }
+  }
+
   Future<void> _pickCalcMethod() async {
     final selected = await showModalBottomSheet<int>(
       context: context,
@@ -146,11 +199,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _setHijriOffset(int value) async {
-    await AppSettings.setHijriOffset(value);
-    setState(() => _hijriOffset = value);
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
@@ -183,6 +231,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             .methodNames[_calcMethod] ??
                         'Muslim World League',
                     onTap: _pickCalcMethod,
+                  ),
+                  const SizedBox(height: 10),
+                  _tile(
+                    icon: Icons.schedule_rounded,
+                    title: 'Asr timing',
+                    subtitle: _asrSchool == 'hanafi'
+                        ? 'Hanafi'
+                        : 'Shafi\'i / Maliki / Hanbali',
+                    onTap: _pickAsrSchool,
                   ),
                   const SizedBox(height: 10),
                   _hijriOffsetTile(),
@@ -271,61 +328,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                const Icon(Icons.calendar_month_rounded,
-                    color: AppColors.gold),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text('Hijri date adjustment',
+            const Icon(Icons.calendar_month_rounded, color: AppColors.gold),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Hijri date',
                       style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Use this if your local mosque announces a date that\'s a day ahead or behind this app.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _offsetChip('-1 day', -1),
-                const SizedBox(width: 10),
-                _offsetChip('Today', 0),
-                const SizedBox(width: 10),
-                _offsetChip('+1 day', 1),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    'Detected automatically from your location.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _offsetChip(String label, int value) {
-    final selected = _hijriOffset == value;
-    return GestureDetector(
-      onTap: () => _setHijriOffset(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.gold
-              : AppColors.tealPrimary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.darkBg : AppColors.gold,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
         ),
       ),
     );

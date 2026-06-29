@@ -3,7 +3,6 @@ import '../models/hadith.dart';
 import '../services/hadith_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
-import '../utils/emotion_hadith_data.dart';
 import 'hadith_books_screen.dart';
 
 class HadithScreen extends StatefulWidget {
@@ -16,7 +15,6 @@ class HadithScreen extends StatefulWidget {
 class _HadithScreenState extends State<HadithScreen> {
   Hadith? _daily;
   String? _error;
-  EmotionHadith? _selectedEmotion;
 
   @override
   void initState() {
@@ -86,123 +84,8 @@ class _HadithScreenState extends State<HadithScreen> {
                 )
               else
                 _buildHadithCard(_daily!),
-              const SizedBox(height: 28),
-              Text(
-                'How are you feeling?',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Tap an emotion for a related hadith',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              _buildEmotionGrid(),
-              if (_selectedEmotion != null) ...[
-                const SizedBox(height: 16),
-                _buildEmotionCard(_selectedEmotion!),
-              ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmotionGrid() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: EmotionHadithData.entries.map((e) {
-        final selected = _selectedEmotion?.emotion == e.emotion;
-        return GestureDetector(
-          onTap: () => setState(
-              () => _selectedEmotion = selected ? null : e),
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.gold.withValues(alpha: 0.18)
-                  : Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: selected ? AppColors.gold : Colors.transparent,
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(e.emoji, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 6),
-                Text(
-                  e.emotion,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: selected ? AppColors.gold : null,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildEmotionCard(EmotionHadith e) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(e.emoji, style: const TextStyle(fontSize: 20)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'For when you feel ${e.emotion.toLowerCase()}',
-                    style: TextStyle(
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const GradeLabel(grade: 'Sahih'),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                e.arabicText,
-                textAlign: TextAlign.right,
-                textDirection: TextDirection.rtl,
-                style: AppTheme.arabicStyle(
-                  color: Theme.of(context).textTheme.bodyLarge!.color!,
-                  fontSize: 22,
-                  height: 1.9,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              e.englishText,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(height: 1.5),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '— ${e.source}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
         ),
       ),
     );
@@ -237,7 +120,7 @@ class _HadithScreenState extends State<HadithScreen> {
                     size: 18, color: AppColors.gold),
                 const SizedBox(width: 8),
                 Text(
-                  '${h.book} · #${h.number}',
+                  h.reference ?? '${h.book} · #${h.number}',
                   style: TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.w600,

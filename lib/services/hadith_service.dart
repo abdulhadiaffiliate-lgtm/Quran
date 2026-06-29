@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/hadith.dart';
+import '../utils/daily_hadith_data.dart';
 
 /// Wraps the fawazahmed0/hadith-api served via the jsDelivr CDN.
 /// No API key required; data is static JSON.
@@ -109,18 +110,25 @@ class HadithService {
   /// Returns a deterministic "hadith of the day" — same hadith for everyone
   /// on a given calendar day, rotating daily. Restricted to the two Sahih
   /// collections (Bukhari & Muslim) so only authentic hadith are shown.
+  /// Returns the "hadith of the day" — same hadith for everyone on a
+  /// given calendar day, rotating daily through a hand-curated bank of
+  /// genuinely instructive Sahih hadith (a clear command or benefit),
+  /// rather than a random hadith number which can land on narration
+  /// chains or context-only content. Fully offline — no network call.
   static Future<Hadith> getDailyHadith() async {
     final now = DateTime.now();
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
+    final entries = DailyHadithData.entries;
+    final entry = entries[dayOfYear % entries.length];
 
-    // Only authentic (Sahih) collections for the daily hadith.
-    const authenticBooks = ['Sahih Bukhari', 'Sahih Muslim'];
-    final bookName = authenticBooks[dayOfYear % authenticBooks.length];
-    final maxCount = books[bookName]!.count;
-    // Keep number in a safe lower range to avoid gaps in sparse editions.
-    final number = (dayOfYear * 7) % (maxCount > 2000 ? 2000 : maxCount) + 1;
-
-    return getHadith(bookName: bookName, number: number);
+    return Hadith(
+      number: 0,
+      arabicText: entry.arabicText,
+      englishText: entry.englishText,
+      book: entry.source,
+      grade: 'Sahih',
+      reference: entry.reference,
+    );
   }
 
   // The four collections exposed in the tabbed books view.

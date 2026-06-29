@@ -6,6 +6,7 @@ class Hadith {
   final String? urduText;
   final String book;
   final String? grade;
+  final String? reference;
 
   Hadith({
     required this.number,
@@ -14,6 +15,7 @@ class Hadith {
     this.urduText,
     required this.book,
     this.grade,
+    this.reference,
   });
 
   factory Hadith.fromJson(Map<String, dynamic> json, {required String book}) {

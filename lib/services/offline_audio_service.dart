@@ -63,7 +63,14 @@ class OfflineAudioService {
         final bytes = await rootBundle.load(_bundledAssetPath(surahNumber));
         await cachedFile.writeAsBytes(bytes.buffer.asUint8List());
         return cachedFile.path;
-      } catch (_) {
+      } catch (e) {
+        // Bundled mp3 for this surah is missing from assets/audio/surahs/
+        // (e.g. only the README placeholder is there). Falling back to
+        // streaming is correct, but log it so this isn't a silent,
+        // hard-to-diagnose gap during development.
+        // ignore: avoid_print
+        print('SalahSync: bundled audio missing for surah $surahNumber '
+            '(${_bundledAssetPath(surahNumber)} -> $e). Falling back to streaming.');
         return null;
       }
     }

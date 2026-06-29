@@ -74,7 +74,7 @@ class NotificationService {
     AndroidNotificationDetails androidDetails;
     if (style == NotifyStyle.azan) {
       androidDetails = const AndroidNotificationDetails(
-        'prayer_azan',
+        'prayer_azan_v2',
         'Prayer Azan',
         channelDescription: 'Plays the adhan at prayer time',
         importance: Importance.max,
@@ -84,7 +84,7 @@ class NotificationService {
       );
     } else {
       androidDetails = AndroidNotificationDetails(
-        'prayer_default',
+        'prayer_default_v2',
         'Prayer Reminders',
         channelDescription: 'Reminds you when each prayer time arrives',
         importance: style == NotifyStyle.silent
@@ -166,11 +166,12 @@ class NotificationService {
         style == NotifyStyle.silent ? Priority.low : Priority.high;
 
     // For the Azan style we reference a custom raw sound resource named
-    // 'adhan'. The user must add android/app/src/main/res/raw/adhan.mp3.
+    // 'adhan' — a short, respectful chime (not a vocal recording), bundled
+    // at android/app/src/main/res/raw/adhan.wav via the build workflow.
     AndroidNotificationDetails androidDetails;
     if (style == NotifyStyle.azan) {
       androidDetails = AndroidNotificationDetails(
-        'prayer_azan',
+        'prayer_azan_v2',
         'Prayer Azan',
         channelDescription: 'Plays the adhan at prayer time',
         importance: Importance.max,
@@ -180,7 +181,7 @@ class NotificationService {
       );
     } else {
       androidDetails = AndroidNotificationDetails(
-        'prayer_default',
+        'prayer_default_v2',
         'Prayer Reminders',
         channelDescription: 'Reminds you when each prayer time arrives',
         importance: importance,
@@ -191,7 +192,7 @@ class NotificationService {
 
     final iosDetails = DarwinNotificationDetails(
       presentSound: playSound,
-      sound: style == NotifyStyle.azan ? 'adhan.aiff' : null,
+      sound: style == NotifyStyle.azan ? 'adhan.wav' : null,
     );
 
     final details = NotificationDetails(

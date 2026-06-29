@@ -69,6 +69,23 @@ class AppSettings {
 
   static const _hijriOffsetKey = 'hijri_date_offset';
 
+  /// Asr juristic school: 'hanafi' or 'shafii'. Affects when Asr begins —
+  /// Hanafi uses the later (double-shadow-length) time, which is the
+  /// standard followed across Pakistan and South Asia generally; Shafi'i
+  /// (and Maliki/Hanbali) use the earlier (equal-shadow-length) time.
+  /// Defaults to Hanafi.
+  static const _asrSchoolKey = 'asr_school';
+
+  static Future<String> getAsrSchool() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_asrSchoolKey) ?? 'hanafi';
+  }
+
+  static Future<void> setAsrSchool(String school) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_asrSchoolKey, school);
+  }
+
   /// Manual adjustment to the Hijri date in days (-1, 0, or +1), since
   /// astronomical calculation can differ from local moon-sighting by a day.
   static Future<int> getHijriOffset() async {
@@ -79,5 +96,21 @@ class AppSettings {
   static Future<void> setHijriOffset(int offset) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_hijriOffsetKey, offset);
+  }
+
+  static const _hijriOffsetAutoDetectedKey = 'hijri_offset_auto_detected';
+
+  /// True until the user manually changes the Hijri offset themselves —
+  /// while true, the app may auto-apply a regional default (e.g. -1 day
+  /// for South Asia, where local moon-sighting reliably runs a day behind
+  /// the global astronomical calculation).
+  static Future<bool> isHijriOffsetAutoDetected() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_hijriOffsetAutoDetectedKey) ?? true;
+  }
+
+  static Future<void> setHijriOffsetAutoDetected(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hijriOffsetAutoDetectedKey, value);
   }
 }

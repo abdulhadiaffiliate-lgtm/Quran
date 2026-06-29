@@ -4,6 +4,7 @@ import 'tasbih_screen.dart';
 import 'purification_screen.dart';
 import 'rakat_screen.dart';
 import 'dua_screen.dart';
+import 'emotions_screen.dart';
 import 'quiz_screen.dart';
 import 'adhkar_screen.dart';
 import 'qada_screen.dart';
@@ -28,6 +29,17 @@ class MoreScreen extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const DuaScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _tile(
+              context,
+              icon: Icons.favorite_rounded,
+              title: 'How are you feeling?',
+              subtitle: 'A verse and a hadith for what you feel',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EmotionsScreen()),
               ),
             ),
             const SizedBox(height: 12),

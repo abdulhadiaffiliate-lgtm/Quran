@@ -43,11 +43,6 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
     });
   }
 
-  Future<void> _setOffset(int value) async {
-    await AppSettings.setHijriOffset(value);
-    setState(() => _offset = value);
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = widget.times;
@@ -175,22 +170,11 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Text(
-                  'Moon-sighting can differ from this calculation by a day. Adjust if your local mosque announces a different date.',
+                  'Detected automatically from your location.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _offsetButton('-1 day', -1),
-                    const SizedBox(width: 10),
-                    _offsetButton('Today', 0),
-                    const SizedBox(width: 10),
-                    _offsetButton('+1 day', 1),
-                  ],
                 ),
               ],
             ],
@@ -251,30 +235,6 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
           },
         ),
       ],
-    );
-  }
-
-  Widget _offsetButton(String label, int value) {
-    final selected = _offset == value;
-    return GestureDetector(
-      onTap: () => _setOffset(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.tealPrimary
-              : AppColors.tealPrimary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : AppColors.gold,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-      ),
     );
   }
 }

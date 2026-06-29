@@ -75,6 +75,16 @@ class _HomeScreenState extends State<HomeScreen> {
         await AppSettings.setCalcMethod(detected);
         await AppSettings.setCalcMethodAutoDetected(true);
       }
+      // Auto-default the Hijri offset to -1 day for users in South Asia
+      // (Pakistan, India, Bangladesh, Afghanistan), where local
+      // moon-sighting reliably runs about a day behind the global
+      // astronomical calculation. Only applies until the user manually
+      // changes the offset themselves.
+      if (await AppSettings.isHijriOffsetAutoDetected() &&
+          CalcMethodResolver.isSouthAsia(lat, lng)) {
+        await AppSettings.setHijriOffset(-1);
+        if (mounted) setState(() => _hijriOffset = -1);
+      }
       final method = await AppSettings.getCalcMethod();
       final times = await PrayerService.getTodayTimings(
         latitude: lat,

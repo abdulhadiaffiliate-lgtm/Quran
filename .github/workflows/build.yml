@@ -60,6 +60,7 @@ jobs:
               <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
               <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
           '''
           marker = '<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
           if 'ACCESS_FINE_LOCATION' not in content:
@@ -206,12 +207,16 @@ jobs:
 
       - name: Copy adhan sound to Android raw resources
         run: |
-          if [ -f assets/audio/adhan.mp3 ]; then
+          if [ -f assets/audio/adhan.wav ]; then
+            mkdir -p android/app/src/main/res/raw
+            cp assets/audio/adhan.wav android/app/src/main/res/raw/adhan.wav
+            echo "adhan.wav copied to raw resources."
+          elif [ -f assets/audio/adhan.mp3 ]; then
             mkdir -p android/app/src/main/res/raw
             cp assets/audio/adhan.mp3 android/app/src/main/res/raw/adhan.mp3
             echo "adhan.mp3 copied to raw resources."
           else
-            echo "No adhan.mp3 found in assets/audio/ — Azan style will fall back to default sound."
+            echo "No adhan sound file found in assets/audio/ — Azan style will fall back to default sound."
           fi
 
       - name: Decode signing keystore
