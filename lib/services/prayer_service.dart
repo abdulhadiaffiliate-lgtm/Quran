@@ -57,6 +57,7 @@ class PrayerService {
         isha: computed.isha,
         hijriDate: hijri ?? '',
         gregorianDate: computed.gregorianDate,
+        timezone: DateTime.now().timeZoneName,
       );
     }
   }

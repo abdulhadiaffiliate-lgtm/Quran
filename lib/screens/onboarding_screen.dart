@@ -13,11 +13,19 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
+  final _nameController = TextEditingController();
   int _page = 0;
   NotifyStyle _selectedStyle = NotifyStyle.notification;
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
   void _next() {
-    if (_page < 4) {
+    if (_page < 5) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -36,6 +44,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      await AppSettings.setUserName(name);
+    }
     await AppSettings.setNotifyStyle(_selectedStyle);
     await AppSettings.setOnboarded(true);
     widget.onComplete();
@@ -55,6 +67,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 onPageChanged: (i) => setState(() => _page = i),
                 children: [
                   _welcomePage(),
+                  _namePage(),
                   _locationPage(),
                   _notificationPage(),
                   _stylePage(),
@@ -73,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _dots() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (i) {
+      children: List.generate(6, (i) {
         final active = i == _page;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
@@ -155,6 +168,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           label,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
+      ),
+    );
+  }
+
+  Widget _namePage() {
+    final hasName = _nameController.text.trim().isNotEmpty;
+    return _pageScaffold(
+      icon: Icons.person_rounded,
+      title: 'What should we call you?',
+      body:
+          'We\'ll use your name to greet you. It stays on your phone and is never shared — your data isn\'t at risk.',
+      action: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: TextField(
+              controller: _nameController,
+              textAlign: TextAlign.center,
+              textCapitalization: TextCapitalization.words,
+              onChanged: (_) => setState(() {}),
+              style: const TextStyle(
+                color: AppColors.textOnDarkPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Your name',
+                hintStyle: const TextStyle(
+                    color: AppColors.textOnDarkSecondary),
+                filled: true,
+                fillColor: AppColors.darkSurface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 16),
+              ),
+              onSubmitted: (_) {
+                if (hasName) _next();
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Opacity(
+            opacity: hasName ? 1.0 : 0.4,
+            child: _primaryButton(
+              'Continue',
+              hasName ? _next : () {},
+            ),
+          ),
+        ],
       ),
     );
   }

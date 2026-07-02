@@ -9,6 +9,7 @@ class PrayerTimes {
   final DateTime isha;
   final String hijriDate;
   final String gregorianDate;
+  final String? timezone; // e.g. "Asia/Karachi"
   // Structured Hijri fields, used to apply a manual ±1 day offset without
   // another network call.
   final int? hijriDay;
@@ -25,6 +26,7 @@ class PrayerTimes {
     required this.isha,
     required this.hijriDate,
     required this.gregorianDate,
+    this.timezone,
     this.hijriDay,
     this.hijriMonthName,
     this.hijriMonthNumber,
@@ -64,6 +66,7 @@ class PrayerTimes {
       isha: parseTime(timings['Isha']),
       hijriDate: '${hijri['day']} ${hijri['month']['en']} ${hijri['year']}',
       gregorianDate: date['gregorian']['date'] as String,
+      timezone: json['meta']?['timezone'] as String?,
       hijriDay: hijriDay,
       hijriMonthName: hijriMonthName,
       hijriMonthNumber: hijriMonthNumber,

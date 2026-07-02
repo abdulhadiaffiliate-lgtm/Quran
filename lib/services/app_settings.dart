@@ -15,6 +15,21 @@ class AppSettings {
     return prefs.getBool(_onboardedKey) ?? false;
   }
 
+  static const _userNameKey = 'user_name';
+
+  /// The person's name, used to personalize the home-screen greeting.
+  /// Stored locally only — no account, no server.
+  static Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString(_userNameKey);
+    return (name != null && name.trim().isNotEmpty) ? name.trim() : null;
+  }
+
+  static Future<void> setUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userNameKey, name.trim());
+  }
+
   static Future<void> setOnboarded(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_onboardedKey, value);

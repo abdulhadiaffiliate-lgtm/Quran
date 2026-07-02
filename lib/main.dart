@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/app_settings.dart';
@@ -101,11 +102,24 @@ class _RootShellState extends State<RootShell> {
   @override
   void initState() {
     super.initState();
-    // After first frame, run the daily streak + popup.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _dailyCheck());
+    // After first frame, run permissions + streak + popup.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startup());
   }
 
-  Future<void> _dailyCheck() async {
+  Future<void> _startup() async {
+    // 1. Request notification permissions (Android 13+).
+    await NotificationService.requestPermissions();
+
+    // 2. Request battery optimization exemption — critical on ColorOS,
+    //    MIUI, and other OEM skins that kill exact alarms aggressively.
+    //    We check status first so we only prompt once.
+    final batteryStatus =
+        await Permission.ignoreBatteryOptimizations.status;
+    if (!batteryStatus.isGranted) {
+      await Permission.ignoreBatteryOptimizations.request();
+    }
+
+    // 3. Daily streak check and popup.
     final result = await StreakService.recordOpen();
     if (result.isNewDay && mounted) {
       await DailyPopup.show(context, result.current);

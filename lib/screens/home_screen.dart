@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _ticker;
   int _streak = 0;
   int _hijriOffset = 0;
+  String? _userName;
 
   @override
   void initState() {
@@ -41,7 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadStreak() async {
     final s = await StreakService.getCurrentStreak();
-    if (mounted) setState(() => _streak = s);
+    final name = await AppSettings.getUserName();
+    if (mounted) setState(() {
+      _streak = s;
+      _userName = name;
+    });
   }
 
   @override
@@ -96,8 +101,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _times = times;
         _loading = false;
       });
-      // Schedule prayer notifications for the loaded times.
+      // Schedule prayer notifications and daily Quran/dua reminders.
       NotificationService.schedulePrayers(times);
+      NotificationService.scheduleDailyReminders();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -178,41 +184,48 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Assalamu Alaikum',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 2),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => HijriCalendarScreen(times: times),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _userName != null
+                        ? 'Assalamu Alaikum, $_userName'
+                        : 'Assalamu Alaikum',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HijriCalendarScreen(times: times),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          times.hijriDateWithOffset(_hijriOffset),
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          size: 14,
+                          color: AppColors.gold.withValues(alpha: 0.7),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        times.hijriDateWithOffset(_hijriOffset),
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.calendar_month_rounded,
-                        size: 14,
-                        color: AppColors.gold.withValues(alpha: 0.7),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
             IconButton(
               onPressed: _load,

@@ -101,15 +101,62 @@ class _NotificationSettingsScreenState
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Reminders are scheduled for each prayer time. On some phones you may need to allow "Alarms & reminders" and turn off battery optimization for SalahSync so they arrive on time.',
+                            'On ColorOS, MIUI, and similar: go to your phone\'s Settings → Battery → SalahSync and turn off battery optimization, or notifications may not arrive on time.',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  Text('Daily reminders',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  _reminderRow(
+                    context,
+                    icon: Icons.menu_book_rounded,
+                    title: 'Read Quran',
+                    subtitle: 'Every day at 8:00 AM',
+                  ),
+                  const SizedBox(height: 8),
+                  _reminderRow(
+                    context,
+                    icon: Icons.auto_stories_rounded,
+                    title: 'Evening Dua',
+                    subtitle: 'Every day at 7:30 PM',
+                  ),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _reminderRow(BuildContext context,
+      {required IconData icon,
+      required String title,
+      required String subtitle}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.gold, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(subtitle,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
