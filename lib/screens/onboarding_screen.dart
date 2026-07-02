@@ -382,10 +382,4 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       action: _primaryButton('Enter SalahSync', _finish),
     );
   }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 }
