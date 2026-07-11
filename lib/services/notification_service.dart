@@ -179,7 +179,21 @@ class NotificationService {
     required DateTime when,
     required NotifyStyle style,
   }) async {
-    final tzWhen = tz.TZDateTime.from(when, tz.local);
+    final now = DateTime.now();
+    if (when.isBefore(now)) return; // already passed, skip
+
+    // Build a TZDateTime using the components of the local DateTime directly,
+    // instead of converting — avoids the UTC-offset mis-match when tz.local
+    // is not set correctly on the device.
+    final tzWhen = tz.TZDateTime(
+      tz.local,
+      when.year,
+      when.month,
+      when.day,
+      when.hour,
+      when.minute,
+    );
+
     await _plugin.zonedSchedule(
       id,
       'Time for $prayerName',
@@ -189,7 +203,6 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      // No matchDateTimeComponents — fires ONCE, not infinitely repeating.
     );
   }
 
@@ -199,20 +212,25 @@ class NotificationService {
     required String body,
     required DateTime when,
   }) async {
-    final tzWhen = tz.TZDateTime.from(when, tz.local);
+    final tzWhen = tz.TZDateTime(
+      tz.local,
+      when.year,
+      when.month,
+      when.day,
+      when.hour,
+      when.minute,
+    );
+
     await _plugin.zonedSchedule(
       id,
       title,
       body,
       tzWhen,
       _buildDetails(
-          style: NotifyStyle.notification,
-          playSound: true,
-          isReminder: true),
+          style: NotifyStyle.notification, playSound: true, isReminder: true),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      // matchDateTimeComponents.time makes this repeat daily at the same time.
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

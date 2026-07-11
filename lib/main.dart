@@ -119,10 +119,12 @@ class _RootShellState extends State<RootShell> {
       await Permission.ignoreBatteryOptimizations.request();
     }
 
-    // 3. Daily streak check and popup.
-    final result = await StreakService.recordOpen();
-    if (result.isNewDay && mounted) {
-      await DailyPopup.show(context, result.current);
+    // Streak is recorded in HomeScreen._loadStreak().
+    // We just check if the popup should show today.
+    final shouldShow = await StreakService.shouldShowPopupToday();
+    if (shouldShow && mounted) {
+      final streak = await StreakService.getCurrentStreak();
+      await DailyPopup.show(context, streak);
     }
   }
 
