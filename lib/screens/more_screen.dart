@@ -5,6 +5,7 @@ import 'purification_screen.dart';
 import 'rakat_screen.dart';
 import 'dua_screen.dart';
 import 'emotions_screen.dart';
+import 'qibla_screen.dart';
 import 'quiz_screen.dart';
 import 'adhkar_screen.dart';
 import 'qada_screen.dart';
@@ -21,6 +22,17 @@ class MoreScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _tile(
+              context,
+              icon: Icons.explore_rounded,
+              title: 'Qibla Direction',
+              subtitle: 'Find the direction of prayer',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QiblaScreen()),
+              ),
+            ),
+            const SizedBox(height: 12),
             _tile(
               context,
               icon: Icons.auto_stories_rounded,

@@ -12,10 +12,16 @@ import 'hijri_calendar_screen.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../utils/good_deeds.dart';
-import '../widgets/goals_card.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final PrayerTimes? sharedTimes;
+  final int hijriOffset;
+
+  const HomeScreen({
+    super.key,
+    this.sharedTimes,
+    this.hijriOffset = 0,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -46,11 +52,31 @@ class _HomeScreenState extends State<HomeScreen>
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
 
-    _load();
+    // Use times already fetched by the shell if available.
+    if (widget.sharedTimes != null) {
+      _times = widget.sharedTimes;
+      _hijriOffset = widget.hijriOffset;
+      _loading = false;
+    } else {
+      _load();
+    }
     _loadStreak();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && _times != null) setState(() {});
     });
+  }
+
+  @override
+  void didUpdateWidget(HomeScreen old) {
+    super.didUpdateWidget(old);
+    // Sync when shell provides updated times.
+    if (widget.sharedTimes != null && widget.sharedTimes != old.sharedTimes) {
+      setState(() {
+        _times = widget.sharedTimes;
+        _hijriOffset = widget.hijriOffset;
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -278,17 +304,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
 
-        // ── Goals ────────────────────────────────────────────────────────────
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
-          child: GoalsCard(),
-        ),
-
-        // ── Daily good deed ──────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          child: _GoodDeedCard(),
-        ),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -343,12 +359,12 @@ class _ArcCard extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            height: 210,
+            height: 260,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 CustomPaint(
-                  size: const Size(240, 210),
+                  size: const Size(260, 260),
                   painter: _ArcPainter(
                     progress: progress,
                     isDark: isDark,
@@ -445,8 +461,8 @@ class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final cy = size.height * 0.85;
-    final r = size.width * 0.44;
+    final cy = size.height * 0.80;
+    final r = size.width * 0.46;
 
     const startAngle = math.pi * 0.85;
     const sweepTotal = math.pi * 1.30;

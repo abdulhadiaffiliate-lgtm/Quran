@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import '../models/quran.dart';
 import '../services/quran_service.dart';
 import '../services/app_settings.dart';
@@ -8,6 +7,7 @@ import '../services/quran_progress_service.dart';
 import '../services/reciter_service.dart';
 import '../services/ayah_timing_service.dart';
 import '../services/offline_audio_service.dart';
+import '../services/quran_player_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import 'learn_ayah_screen.dart';
@@ -27,12 +27,15 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   bool _showTranslation = true;
   String _language = 'English';
 
-  final AudioPlayer _player = AudioPlayer();
-  int? _playingAyah; // numberInSurah currently playing
+  // All audio goes through the singleton service so playback continues
+  // when the user navigates away (mini-player stays visible).
+  QuranPlayerService get _svc => QuranPlayerService.instance;
+
+  int? _playingAyah; // numberInSurah currently highlighted
   bool _playingAll = false;
   String _reciterId = 'ar.alafasy';
-  List<int> _ayahStartTimes = []; // ms, only populated when supported
-  StreamSubscription<Duration>? _positionSub;
+  List<int> _ayahStartTimes = [];
+  StreamSubscription<int?>? _highlightSub;
 
   // The standard Bismillah text as it appears prefixed on first ayahs.
   static const _bismillah = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
@@ -41,7 +44,27 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   void initState() {
     super.initState();
     _init();
-    _player.onPlayerComplete.listen((_) => _onTrackComplete());
+    // Listen to ayah highlight events from the service.
+    _highlightSub = _svc.ayahHighlightStream.listen((idx) {
+      if (!mounted) return;
+      setState(() {
+        _playingAyah = idx != null
+            ? (_full?.ayahs[idx].numberInSurah)
+            : null;
+      });
+    });
+    // Sync playing state whenever service state changes.
+    _svc.addListener(_syncState);
+  }
+
+  void _syncState() {
+    if (!mounted) return;
+    final s = _svc.state;
+    final isOurSurah = s.surahNumber == widget.surahMeta.number;
+    setState(() {
+      _playingAll = isOurSurah && (s.isPlaying || s.isPaused);
+      if (!isOurSurah) _playingAyah = null;
+    });
   }
 
   Future<void> _init() async {
@@ -150,7 +173,7 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
     if (selected != null && selected != _reciterId) {
       await ReciterService.setSelectedId(selected);
       setState(() => _reciterId = selected);
-      await _player.stop();
+      await _svc.stop();
       setState(() {
         _playingAll = false;
         _playingAyah = null;
@@ -230,16 +253,17 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
 
   Future<void> _playAyah(Ayah ayah) async {
     if (ayah.audioUrl == null) return;
-    _chainMode = false; // cancel any whole-surah streaming chain
-    if (_playingAyah == ayah.numberInSurah) {
-      await _player.stop();
-      setState(() {
-        _playingAyah = null;
-        _playingAll = false;
-      });
+    if (_playingAyah == ayah.numberInSurah && _svc.state.isPlaying) {
+      await _svc.stop();
+      setState(() { _playingAyah = null; _playingAll = false; });
     } else {
-      await _player.stop();
-      await _player.play(UrlSource(ayah.audioUrl!));
+      // Play just this ayah — pass a single-element ayah list.
+      await _svc.playSurah(
+        surahNumber: widget.surahMeta.number,
+        surahName: widget.surahMeta.nameEnglish,
+        ayahs: [ayah],
+        reciterId: _reciterId,
+      );
       setState(() {
         _playingAyah = ayah.numberInSurah;
         _playingAll = false;
@@ -252,73 +276,18 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
   bool _isDownloading = false;
   double? _downloadProgress;
 
-  // Index into the surah's ayahs while chain-playing for streaming.
-  int _chainIndex = 0;
-  bool _chainMode = false; // true when streaming verse-by-verse
-
   Future<void> _playWholeSurah() async {
     if (_playingAll) {
-      // Stop play-all.
-      _chainMode = false;
-      await _player.stop();
-      _positionSub?.cancel();
+      await _svc.stop();
       setState(() {
         _playingAll = false;
         _playingAyah = null;
-        _bufferingFullSurah = false;
       });
       return;
     }
 
-    await _player.stop();
-
-    // Prefer an offline source (bundled short surah, or previously
-    // downloaded) — a single continuous file that's already local, so it
-    // starts instantly.
-    final offlinePath = await OfflineAudioService.getOfflineSource(
-        widget.surahMeta.number, _reciterId);
-
-    // Load timing data (for highlighting) regardless of playback method.
-    _ayahStartTimes = await AyahTimingService.getAyahStartTimes(
-      reciterId: _reciterId,
-      surahNumber: widget.surahMeta.number,
-      ayahCount: _full?.ayahs.length ?? widget.surahMeta.ayahCount,
-    );
-
-    setState(() {
-      _playingAll = true;
-      _playingAyah = null;
-    });
-
-    if (offlinePath != null) {
-      // OFFLINE: one continuous local file, highlight via position timing.
-      _chainMode = false;
-      _positionSub?.cancel();
-      _positionSub = _player.onPositionChanged.listen((pos) {
-        if (!mounted || !_playingAll) return;
-        if (_ayahStartTimes.isNotEmpty) {
-          final index = AyahTimingService.ayahIndexForPosition(
-              _ayahStartTimes, pos.inMilliseconds);
-          if (index != null && index != _playingAyah) {
-            setState(() => _playingAyah = index);
-          }
-        }
-      });
-      await _player.play(DeviceFileSource(offlinePath));
-      return;
-    }
-
-    // STREAMING: chain the small per-ayah audio files instead of waiting
-    // for one big continuous file to fully download. Each verse starts
-    // playing within a second, and we advance to the next on completion.
     final ayahs = _full?.ayahs;
-    if (ayahs == null || ayahs.isEmpty || ayahs.first.audioUrl == null) {
-      // No per-ayah audio available (e.g. offline with no download) —
-      // can't stream. Let the user know rather than sit silent.
-      setState(() {
-        _playingAll = false;
-        _playingAyah = null;
-      });
+    if (ayahs == null || ayahs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
@@ -327,60 +296,31 @@ class _SurahReaderScreenState extends State<SurahReaderScreen> {
       return;
     }
 
-    _positionSub?.cancel();
-    _chainMode = true;
-    _chainIndex = 0;
-    _playChainAt(0);
-  }
+    // Load timing data for highlight sync.
+    _ayahStartTimes = await AyahTimingService.getAyahStartTimes(
+      reciterId: _reciterId,
+      surahNumber: widget.surahMeta.number,
+      ayahCount: ayahs.length,
+    );
 
-  Future<void> _playChainAt(int index) async {
-    final ayahs = _full?.ayahs;
-    if (!_chainMode || ayahs == null || index >= ayahs.length) {
-      if (index >= (ayahs?.length ?? 0)) {
-        // Finished the whole surah.
-        _onTrackComplete();
-      }
-      return;
-    }
-    final ayah = ayahs[index];
-    if (ayah.audioUrl == null) {
-      _playChainAt(index + 1);
-      return;
-    }
-    _chainIndex = index;
-    setState(() => _playingAyah = ayah.numberInSurah);
-    try {
-      await _player.play(UrlSource(ayah.audioUrl!));
-    } catch (_) {
-      if (mounted && _chainMode) _playChainAt(index + 1);
-    }
-  }
-
-  void _onTrackComplete() {
-    if (!mounted) return;
-    // In chain (streaming) mode, completion of one ayah means advance to
-    // the next rather than stopping.
-    if (_chainMode) {
-      final next = _chainIndex + 1;
-      final ayahs = _full?.ayahs;
-      if (ayahs != null && next < ayahs.length) {
-        _playChainAt(next);
-        return;
-      }
-    }
-    _chainMode = false;
-    _positionSub?.cancel();
     setState(() {
-      _playingAll = false;
+      _playingAll = true;
       _playingAyah = null;
-      _bufferingFullSurah = false;
     });
+
+    await _svc.playSurah(
+      surahNumber: widget.surahMeta.number,
+      surahName: widget.surahMeta.nameEnglish,
+      ayahs: ayahs,
+      reciterId: _reciterId,
+      ayahStartTimes: _ayahStartTimes,
+    );
   }
 
   @override
   void dispose() {
-    _positionSub?.cancel();
-    _player.dispose();
+    _highlightSub?.cancel();
+    _svc.removeListener(_syncState);
     super.dispose();
   }
 
