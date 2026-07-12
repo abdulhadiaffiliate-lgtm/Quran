@@ -567,7 +567,7 @@ class _StoryCard extends StatelessWidget {
               top: -20,
               child: Opacity(
                 opacity: 0.06,
-                child: Icon(Icons.star_of_david_rounded,
+                child: Icon(Icons.auto_awesome_rounded,
                     size: 140,
                     color: Colors.white),
               ),
