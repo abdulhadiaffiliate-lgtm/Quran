@@ -160,6 +160,7 @@ class _RootShellState extends State<RootShell> {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final screens = [
@@ -175,75 +176,246 @@ class _RootShellState extends State<RootShell> {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Mini-player floats above the nav when audio is playing
           MiniPlayer(
-            onTap: () {
-              // Navigate to Quran tab so user can access the reader
-              setState(() => _index = 1);
-            },
+            onTap: () => setState(() => _index = 1),
           ),
-          Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 64,
-            child: Row(
-              children: [
-                _NavItem(
-                  icon: Icons.access_time_rounded,
-                  label: 'Prayer',
-                  selected: _index == 0,
-                  onTap: () => setState(() => _index = 0),
-                ),
-                _NavItem(
-                  icon: Icons.menu_book_rounded,
-                  label: 'Quran',
-                  selected: _index == 1,
-                  onTap: () => setState(() => _index = 1),
-                ),
-                _HomeNavButton(
-                  selected: _index == 2,
-                  onTap: () => setState(() => _index = 2),
-                ),
-                _NavItem(
-                  icon: Icons.format_quote_rounded,
-                  label: 'Hadith',
-                  selected: _index == 3,
-                  onTap: () => setState(() => _index = 3),
-                ),
-                _NavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'More',
-                  selected: _index == 4,
-                  onTap: () => setState(() => _index = 4),
-                ),
-              ],
-            ),
+          _PremiumNavBar(
+            selectedIndex: _index,
+            onTap: (i) => setState(() => _index = i),
           ),
-        ),
-      ),  // end Container (nav bar)
-        ],  // end Column children
-      ),  // end Column (bottomNavigationBar)
+        ],
+      ),
     );
   }
 }
 
-class _NavItem extends StatelessWidget {
+// ─── Premium Nav Bar ──────────────────────────────────────────────────────────
+
+class _PremiumNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _PremiumNavBar({
+    required this.selectedIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.transparent,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              // ── The unified pill container ────────────────────────────────
+              Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(36),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF0D2B1A), // very dark emerald
+                      Color(0xFF1A4428), // mid emerald
+                      Color(0xFF0F3020), // dark emerald
+                      Color(0xFF1D4D30), // lighter emerald
+                    ],
+                    stops: [0.0, 0.3, 0.6, 1.0],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0D2B1A).withValues(alpha: 0.6),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFFC9A461).withValues(alpha: 0.15),
+                      blurRadius: 1,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 0),
+                    ),
+                  ],
+                ),
+                foregroundDecoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(36),
+                  border: Border.all(
+                    color: const Color(0xFFC9A461).withValues(alpha: 0.55),
+                    width: 1.2,
+                  ),
+                ),
+                // Marble veining overlay
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(36),
+                  child: CustomPaint(
+                    painter: _MarblePainter(),
+                    child: Row(
+                      children: [
+                        _PremiumNavItem(
+                          icon: Icons.access_time_rounded,
+                          label: 'Prayer',
+                          selected: selectedIndex == 0,
+                          onTap: () => onTap(0),
+                        ),
+                        _PremiumNavItem(
+                          icon: Icons.menu_book_rounded,
+                          label: 'Quran',
+                          selected: selectedIndex == 1,
+                          onTap: () => onTap(1),
+                        ),
+                        const SizedBox(width: 72), // space for center button
+                        _PremiumNavItem(
+                          icon: Icons.format_quote_rounded,
+                          label: 'Hadith',
+                          selected: selectedIndex == 3,
+                          onTap: () => onTap(3),
+                        ),
+                        _PremiumNavItem(
+                          icon: Icons.grid_view_rounded,
+                          label: 'More',
+                          selected: selectedIndex == 4,
+                          onTap: () => onTap(4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Elevated center Home button ───────────────────────────────
+              Positioned(
+                top: -14,
+                child: GestureDetector(
+                  onTap: () => onTap(2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Outer gold bezel ring
+                      Container(
+                        width: 66,
+                        height: 66,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFE8C97A), // bright gold top
+                              Color(0xFFC9A461), // mid gold
+                              Color(0xFF8B6F47), // dark gold bottom
+                              Color(0xFFDDBB78), // bright gold edge
+                            ],
+                            stops: [0.0, 0.4, 0.7, 1.0],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFC9A461)
+                                  .withValues(alpha: 0.6),
+                              blurRadius: 18,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(3.5),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(17),
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF1A4428),
+                                Color(0xFF0D2B1A),
+                                Color(0xFF1D4D30),
+                              ],
+                            ),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.mosque_rounded,
+                              color: selectedIndex == 2
+                                  ? const Color(0xFFE8C97A)
+                                  : const Color(0xFFC9A461),
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'HOME',
+                        style: TextStyle(
+                          color: selectedIndex == 2
+                              ? const Color(0xFFE8C97A)
+                              : const Color(0xFFC9A461),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Paints subtle marble-like veining over the nav bar background.
+class _MarblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.028)
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+
+    // A few gentle diagonal veins — soft, not obvious
+    final path1 = Path()
+      ..moveTo(size.width * 0.1, 0)
+      ..quadraticBezierTo(
+          size.width * 0.3, size.height * 0.6,
+          size.width * 0.5, size.height * 0.3)
+      ..quadraticBezierTo(
+          size.width * 0.65, size.height * 0.0,
+          size.width * 0.85, size.height * 0.7);
+
+    final path2 = Path()
+      ..moveTo(size.width * 0.6, 0)
+      ..quadraticBezierTo(
+          size.width * 0.75, size.height * 0.5,
+          size.width * 0.9, size.height * 0.2);
+
+    canvas.drawPath(path1, paint);
+    canvas.drawPath(path2, paint..color = const Color(0xFFFFFFFF).withValues(alpha: 0.018));
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+class _PremiumNavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _NavItem({
+  const _PremiumNavItem({
     required this.icon,
     required this.label,
     required this.selected,
@@ -252,86 +424,32 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = selected
-        ? AppColors.gold
-        : (isDark
-            ? AppColors.textOnDarkSecondary
-            : AppColors.textWarmDark.withValues(alpha: 0.45));
+        ? const Color(0xFFE8C97A)  // bright gold when selected
+        : const Color(0xFFC9A461).withValues(alpha: 0.55);
 
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeNavButton extends StatelessWidget {
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _HomeNavButton({required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.tealPrimary, AppColors.tealPrimaryLight],
+        child: SizedBox(
+          height: 70,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
                 ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.tealPrimary.withValues(alpha: 0.45),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
-              child: Icon(
-                Icons.home_rounded,
-                color: selected ? AppColors.gold : Colors.white,
-                size: 26,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              'Home',
-              style: TextStyle(
-                color: selected ? AppColors.gold : AppColors.tealPrimaryLight,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
